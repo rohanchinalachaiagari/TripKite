@@ -28,7 +28,7 @@ final class TripKitUITests: XCTestCase {
         let app = XCUIApplication()
         app.launch()
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+        // Use XCTAssert and related functions to verify your tests producthe correct results.
         // XCUIAutomation Documentation
         // https://developer.apple.com/documentation/xcuiautomation
     }
