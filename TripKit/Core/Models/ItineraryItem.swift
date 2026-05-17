@@ -11,6 +11,7 @@ struct ItineraryItem: Identifiable, Hashable {
     var address: String
     var confirmationNumber: String
     var notes: String
+    var reminderOffset: TimeInterval?
     var createdAt: Date
     var updatedAt: Date
 
@@ -25,6 +26,7 @@ struct ItineraryItem: Identifiable, Hashable {
         address: String = "",
         confirmationNumber: String = "",
         notes: String = "",
+        reminderOffset: TimeInterval? = nil,
         createdAt: Date = Date(),
         updatedAt: Date = Date()
     ) {
@@ -38,6 +40,7 @@ struct ItineraryItem: Identifiable, Hashable {
         self.address = address
         self.confirmationNumber = confirmationNumber
         self.notes = notes
+        self.reminderOffset = reminderOffset
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }

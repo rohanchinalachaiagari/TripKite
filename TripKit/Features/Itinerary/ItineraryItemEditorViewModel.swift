@@ -24,21 +24,35 @@ final class ItineraryItemEditorViewModel: ObservableObject {
     @Published var address: String
     @Published var confirmationNumber: String
     @Published var notes: String
+    @Published var reminderOption: ReminderOption {
+        didSet {
+            let previous = oldValue
+            Task { await handleReminderOptionChange(from: previous) }
+        }
+    }
+    @Published private(set) var authorizationStatus: NotificationAuthorizationStatus = .notDetermined
     @Published var errorMessage: String?
+    @Published var pendingOutsideRangeConfirmation: Bool = false
     @Published private(set) var isSaving = false
 
     let mode: Mode
     private let tripId: UUID
+    private let tripRange: ClosedRange<Date>?
     private let repository: ItineraryRepository
+    private let notificationService: NotificationSchedulingService
     private let now: @Sendable () -> Date
 
     init(
         mode: Mode,
         repository: ItineraryRepository,
+        notificationService: NotificationSchedulingService,
+        tripRange: ClosedRange<Date>? = nil,
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.mode = mode
+        self.tripRange = tripRange
         self.repository = repository
+        self.notificationService = notificationService
         self.now = now
 
         switch mode {
@@ -53,6 +67,7 @@ final class ItineraryItemEditorViewModel: ObservableObject {
             self.address = ""
             self.confirmationNumber = ""
             self.notes = ""
+            self.reminderOption = .none
         case .edit(let item):
             self.tripId = item.tripId
             self.title = item.title
@@ -65,7 +80,19 @@ final class ItineraryItemEditorViewModel: ObservableObject {
             self.address = item.address
             self.confirmationNumber = item.confirmationNumber
             self.notes = item.notes
+            self.reminderOption = ReminderOption.match(offset: item.reminderOffset)
         }
+    }
+
+    func loadAuthorizationStatus() async {
+        authorizationStatus = await notificationService.currentAuthorizationStatus()
+    }
+
+    private func handleReminderOptionChange(from oldValue: ReminderOption) async {
+        guard oldValue == .none, reminderOption != .none else { return }
+        guard authorizationStatus == .notDetermined else { return }
+        _ = await notificationService.requestAuthorization()
+        authorizationStatus = await notificationService.currentAuthorizationStatus()
     }
 
     var isSaveDisabled: Bool {
@@ -74,18 +101,45 @@ final class ItineraryItemEditorViewModel: ObservableObject {
             || (hasEndDate && endDate < startDate)
     }
 
+    // Calendar-day comparison so that an item scheduled in the afternoon of a
+    // trip's departure day is still considered "inside" even when endDate is
+    // stored as midnight of that day.
+    var isStartDateInsideTripRange: Bool {
+        guard let tripRange else { return true }
+        let calendar = Calendar.current
+        let itemDay = calendar.startOfDay(for: startDate)
+        let tripStartDay = calendar.startOfDay(for: tripRange.lowerBound)
+        let tripEndDay = calendar.startOfDay(for: tripRange.upperBound)
+        return itemDay >= tripStartDay && itemDay <= tripEndDay
+    }
+
     func save() async -> Bool {
         do {
             try ItineraryValidator.validate(
                 title: title,
                 startDate: startDate,
-                endDate: hasEndDate ? endDate : nil
+                endDate: hasEndDate ? endDate : nil,
+                reminderOffset: reminderOption.offset
             )
         } catch {
             errorMessage = error.localizedDescription
             return false
         }
 
+        if !isStartDateInsideTripRange {
+            pendingOutsideRangeConfirmation = true
+            return false
+        }
+
+        return await performSave()
+    }
+
+    func confirmSaveAnyway() async -> Bool {
+        pendingOutsideRangeConfirmation = false
+        return await performSave()
+    }
+
+    private func performSave() async -> Bool {
         isSaving = true
         defer { isSaving = false }
 
@@ -94,8 +148,10 @@ final class ItineraryItemEditorViewModel: ObservableObject {
         let trimmedAddress = address.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedConfirmation = confirmationNumber.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedEnd: Date? = hasEndDate ? endDate : nil
+        let resolvedOffset = reminderOption.offset
         let timestamp = now()
 
+        let persistedItem: ItineraryItem
         do {
             switch mode {
             case .create:
@@ -109,10 +165,12 @@ final class ItineraryItemEditorViewModel: ObservableObject {
                     address: trimmedAddress,
                     confirmationNumber: trimmedConfirmation,
                     notes: notes,
+                    reminderOffset: resolvedOffset,
                     createdAt: timestamp,
                     updatedAt: timestamp
                 )
                 try await repository.createItem(item)
+                persistedItem = item
             case .edit(let existing):
                 let updated = ItineraryItem(
                     id: existing.id,
@@ -125,16 +183,27 @@ final class ItineraryItemEditorViewModel: ObservableObject {
                     address: trimmedAddress,
                     confirmationNumber: trimmedConfirmation,
                     notes: notes,
+                    reminderOffset: resolvedOffset,
                     createdAt: existing.createdAt,
                     updatedAt: timestamp
                 )
                 try await repository.updateItem(updated)
+                persistedItem = updated
             }
-            errorMessage = nil
-            return true
         } catch {
             errorMessage = error.localizedDescription
             return false
         }
+
+        // Always cancel any previous reminder for this item, then schedule a fresh
+        // one if the user has a reminder configured. Scheduling errors (e.g., the
+        // reminder time has already passed) are non-fatal — the item is saved.
+        await notificationService.cancelReminder(forItemId: persistedItem.id)
+        if resolvedOffset != nil {
+            try? await notificationService.scheduleReminder(for: persistedItem)
+        }
+
+        errorMessage = nil
+        return true
     }
 }

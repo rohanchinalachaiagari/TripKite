@@ -4,6 +4,7 @@ struct TripDetailView: View {
     @StateObject private var viewModel: TripDetailViewModel
     private let itineraryRepository: ItineraryRepository
     private let tripRepository: TripRepository
+    private let notificationService: NotificationSchedulingService
     private let onChange: () -> Void
 
     @State private var isEditingTrip = false
@@ -14,16 +15,19 @@ struct TripDetailView: View {
         trip: Trip,
         itineraryRepository: ItineraryRepository,
         tripRepository: TripRepository,
+        notificationService: NotificationSchedulingService,
         onChange: @escaping () -> Void
     ) {
         self.itineraryRepository = itineraryRepository
         self.tripRepository = tripRepository
+        self.notificationService = notificationService
         self.onChange = onChange
         _viewModel = StateObject(
             wrappedValue: TripDetailViewModel(
                 trip: trip,
                 itineraryRepository: itineraryRepository,
-                tripRepository: tripRepository
+                tripRepository: tripRepository,
+                notificationService: notificationService
             )
         )
     }
@@ -119,6 +123,8 @@ struct TripDetailView: View {
                         defaultStartDate: viewModel.trip.startDate
                     ),
                     repository: itineraryRepository,
+                    notificationService: notificationService,
+                    tripRange: viewModel.trip.startDate...viewModel.trip.endDate,
                     onSaved: {
                         Task { await viewModel.load() }
                     }
@@ -130,6 +136,8 @@ struct TripDetailView: View {
                 ItineraryItemEditorView(
                     mode: .edit(item),
                     repository: itineraryRepository,
+                    notificationService: notificationService,
+                    tripRange: viewModel.trip.startDate...viewModel.trip.endDate,
                     onSaved: {
                         Task { await viewModel.load() }
                     }
@@ -248,6 +256,7 @@ private struct FocusCard: View {
             trip: MockData.tokyoTrip,
             itineraryRepository: CoreDataItineraryRepository(stack: stack),
             tripRepository: CoreDataTripRepository(stack: stack),
+            notificationService: UserNotificationSchedulingService(),
             onChange: {}
         )
     }

@@ -14,6 +14,7 @@ extension ItineraryItemEntity {
             address: address ?? "",
             confirmationNumber: confirmationNumber ?? "",
             notes: notes ?? "",
+            reminderOffset: reminderOffset?.doubleValue,
             createdAt: createdAt ?? Date(),
             updatedAt: updatedAt ?? Date()
         )
@@ -31,6 +32,7 @@ extension ItineraryItemEntity {
         address = item.address
         confirmationNumber = item.confirmationNumber
         notes = item.notes
+        reminderOffset = item.reminderOffset.map { NSNumber(value: $0) }
         createdAt = item.createdAt
         updatedAt = item.updatedAt
     }

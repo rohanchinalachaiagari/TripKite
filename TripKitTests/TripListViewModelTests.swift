@@ -9,7 +9,7 @@ final class TripListViewModelTests: XCTestCase {
         let trip = makeTrip(title: "Tokyo")
         await mock.seed([trip])
 
-        let viewModel = TripListViewModel(repository: mock)
+        let viewModel = TripListViewModel(repository: mock, notificationService: MockNotificationSchedulingService())
 
         await viewModel.load()
 
@@ -22,7 +22,7 @@ final class TripListViewModelTests: XCTestCase {
         struct BoomError: LocalizedError { var errorDescription: String? { "Boom" } }
         await mock.setFetchError(BoomError())
 
-        let viewModel = TripListViewModel(repository: mock)
+        let viewModel = TripListViewModel(repository: mock, notificationService: MockNotificationSchedulingService())
         await viewModel.load()
 
         XCTAssertTrue(viewModel.trips.isEmpty)
@@ -35,7 +35,7 @@ final class TripListViewModelTests: XCTestCase {
         let removed = makeTrip(title: "Removed", startOffset: 5)
         await mock.seed([kept, removed])
 
-        let viewModel = TripListViewModel(repository: mock)
+        let viewModel = TripListViewModel(repository: mock, notificationService: MockNotificationSchedulingService())
         await viewModel.load()
 
         await viewModel.delete(removed)
@@ -43,6 +43,21 @@ final class TripListViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.trips.map(\.id), [kept.id])
         let stored = try? await mock.fetchTrips()
         XCTAssertEqual(stored?.map(\.id), [kept.id])
+    }
+
+    func testDelete_CancelsAllRemindersForTrip() async {
+        let mock = MockTripRepository()
+        let trip = makeTrip(title: "WithItems")
+        await mock.seed([trip])
+        let notifications = MockNotificationSchedulingService()
+
+        let viewModel = TripListViewModel(repository: mock, notificationService: notifications)
+        await viewModel.load()
+
+        await viewModel.delete(trip)
+
+        let tripCancellations = await notifications.tripCancellations
+        XCTAssertEqual(tripCancellations, [trip.id])
     }
 
     func testUpcomingTrips_ExcludesPastAndSortsAscending() async {
@@ -55,7 +70,7 @@ final class TripListViewModelTests: XCTestCase {
         let mock = MockTripRepository()
         await mock.seed([past, activeNow, laterUpcoming, soonUpcoming])
 
-        let viewModel = TripListViewModel(repository: mock, dateProvider: { now })
+        let viewModel = TripListViewModel(repository: mock, notificationService: MockNotificationSchedulingService(), dateProvider: { now })
         await viewModel.load()
 
         XCTAssertEqual(viewModel.upcomingTrips.map(\.title), ["Active", "Soon", "Later"])
@@ -70,7 +85,7 @@ final class TripListViewModelTests: XCTestCase {
         let mock = MockTripRepository()
         await mock.seed([earlierPast, recentPast, upcoming])
 
-        let viewModel = TripListViewModel(repository: mock, dateProvider: { now })
+        let viewModel = TripListViewModel(repository: mock, notificationService: MockNotificationSchedulingService(), dateProvider: { now })
         await viewModel.load()
 
         XCTAssertEqual(viewModel.pastTrips.map(\.title), ["Recent", "Earlier"])

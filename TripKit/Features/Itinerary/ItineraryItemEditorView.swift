@@ -9,10 +9,17 @@ struct ItineraryItemEditorView: View {
     init(
         mode: ItineraryItemEditorViewModel.Mode,
         repository: ItineraryRepository,
+        notificationService: NotificationSchedulingService,
+        tripRange: ClosedRange<Date>? = nil,
         onSaved: @escaping () -> Void
     ) {
         _viewModel = StateObject(
-            wrappedValue: ItineraryItemEditorViewModel(mode: mode, repository: repository)
+            wrappedValue: ItineraryItemEditorViewModel(
+                mode: mode,
+                repository: repository,
+                notificationService: notificationService,
+                tripRange: tripRange
+            )
         )
         self.onSaved = onSaved
     }
@@ -41,6 +48,19 @@ struct ItineraryItemEditorView: View {
                 TextField("Address", text: $viewModel.address)
             }
 
+            Section("Reminder") {
+                Picker("Remind me", selection: $viewModel.reminderOption) {
+                    ForEach(ReminderOption.allCases) { option in
+                        Text(option.displayName).tag(option)
+                    }
+                }
+                if viewModel.authorizationStatus == .denied && viewModel.reminderOption != .none {
+                    Text("Notifications are turned off for TripKit. Enable them in Settings to receive reminders.")
+                        .font(TKTypography.metadata)
+                        .foregroundStyle(TKColors.textSecondary)
+                }
+            }
+
             Section("Details") {
                 TextField("Confirmation number", text: $viewModel.confirmationNumber)
                 TextField("Notes", text: $viewModel.notes, axis: .vertical)
@@ -49,6 +69,9 @@ struct ItineraryItemEditorView: View {
         }
         .navigationTitle(viewModel.mode.navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            await viewModel.loadAuthorizationStatus()
+        }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Cancel") { dismiss() }
@@ -79,6 +102,23 @@ struct ItineraryItemEditorView: View {
         } message: { message in
             Text(message)
         }
+        .alert(
+            "Outside trip dates",
+            isPresented: $viewModel.pendingOutsideRangeConfirmation
+        ) {
+            Button("Cancel", role: .cancel) { }
+            Button("Save Anyway") {
+                Task {
+                    let success = await viewModel.confirmSaveAnyway()
+                    if success {
+                        onSaved()
+                        dismiss()
+                    }
+                }
+            }
+        } message: {
+            Text("This item starts outside your trip dates. Save it anyway?")
+        }
     }
 }
 
@@ -89,6 +129,7 @@ struct ItineraryItemEditorView: View {
         ItineraryItemEditorView(
             mode: .create(tripId: MockData.tokyoTrip.id, defaultStartDate: MockData.tokyoTrip.startDate),
             repository: CoreDataItineraryRepository(stack: stack),
+            notificationService: UserNotificationSchedulingService(),
             onSaved: {}
         )
     }
@@ -100,6 +141,7 @@ struct ItineraryItemEditorView: View {
         ItineraryItemEditorView(
             mode: .edit(MockData.tokyoItinerary[0]),
             repository: CoreDataItineraryRepository(stack: stack),
+            notificationService: UserNotificationSchedulingService(),
             onSaved: {}
         )
     }

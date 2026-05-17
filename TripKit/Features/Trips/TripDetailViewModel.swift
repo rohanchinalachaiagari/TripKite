@@ -10,17 +10,20 @@ final class TripDetailViewModel: ObservableObject {
 
     private let itineraryRepository: ItineraryRepository
     private let tripRepository: TripRepository
+    private let notificationService: NotificationSchedulingService
     private let now: @Sendable () -> Date
 
     init(
         trip: Trip,
         itineraryRepository: ItineraryRepository,
         tripRepository: TripRepository,
+        notificationService: NotificationSchedulingService,
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.trip = trip
         self.itineraryRepository = itineraryRepository
         self.tripRepository = tripRepository
+        self.notificationService = notificationService
         self.now = now
     }
 
@@ -40,6 +43,7 @@ final class TripDetailViewModel: ObservableObject {
     }
 
     func deleteItem(_ item: ItineraryItem) async {
+        await notificationService.cancelReminder(forItemId: item.id)
         do {
             try await itineraryRepository.deleteItem(id: item.id)
             items.removeAll { $0.id == item.id }

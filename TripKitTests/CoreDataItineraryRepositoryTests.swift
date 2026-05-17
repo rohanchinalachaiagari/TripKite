@@ -125,6 +125,47 @@ final class CoreDataItineraryRepositoryTests: XCTestCase {
         try await repository.deleteItem(id: UUID())
     }
 
+    // MARK: - Reminder round-trip
+
+    func testCreateItem_PersistsReminderOffset() async throws {
+        let item = ItineraryItem(
+            tripId: trip.id,
+            title: "Flight",
+            type: .flight,
+            startDate: Date(),
+            reminderOffset: 1800
+        )
+        try await repository.createItem(item)
+
+        let fetched = try await repository.item(with: item.id)
+        XCTAssertEqual(fetched?.reminderOffset, 1800)
+    }
+
+    func testCreateItem_RoundTripsNilReminderOffset() async throws {
+        let item = makeItem(title: "No reminder", tripId: trip.id)
+        try await repository.createItem(item)
+
+        let fetched = try await repository.item(with: item.id)
+        XCTAssertNil(fetched?.reminderOffset)
+    }
+
+    func testUpdateItem_ClearsReminderOffset() async throws {
+        var item = ItineraryItem(
+            tripId: trip.id,
+            title: "Flight",
+            type: .flight,
+            startDate: Date(),
+            reminderOffset: 1800
+        )
+        try await repository.createItem(item)
+
+        item.reminderOffset = nil
+        try await repository.updateItem(item)
+
+        let fetched = try await repository.item(with: item.id)
+        XCTAssertNil(fetched?.reminderOffset)
+    }
+
     // MARK: - Cascade
 
     func testDeleteTrip_CascadesDeletesItems() async throws {

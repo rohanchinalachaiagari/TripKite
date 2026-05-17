@@ -8,13 +8,16 @@ final class TripListViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     private let repository: TripRepository
+    private let notificationService: NotificationSchedulingService
     private let dateProvider: @Sendable () -> Date
 
     init(
         repository: TripRepository,
+        notificationService: NotificationSchedulingService,
         dateProvider: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.repository = repository
+        self.notificationService = notificationService
         self.dateProvider = dateProvider
     }
 
@@ -44,6 +47,7 @@ final class TripListViewModel: ObservableObject {
     }
 
     func delete(_ trip: Trip) async {
+        await notificationService.cancelReminders(forTripId: trip.id)
         do {
             try await repository.deleteTrip(id: trip.id)
             trips.removeAll { $0.id == trip.id }

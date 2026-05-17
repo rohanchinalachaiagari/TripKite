@@ -2,28 +2,49 @@ import SwiftUI
 
 struct TripListView: View {
     @StateObject private var viewModel: TripListViewModel
+    @ObservedObject private var appRouter: AppRouter
     private let tripRepository: TripRepository
     private let itineraryRepository: ItineraryRepository
+    private let notificationService: NotificationSchedulingService
 
+    @State private var navigationPath = NavigationPath()
     @State private var isCreating = false
 
     init(
         tripRepository: TripRepository,
-        itineraryRepository: ItineraryRepository
+        itineraryRepository: ItineraryRepository,
+        notificationService: NotificationSchedulingService,
+        appRouter: AppRouter
     ) {
         self.tripRepository = tripRepository
         self.itineraryRepository = itineraryRepository
-        _viewModel = StateObject(wrappedValue: TripListViewModel(repository: tripRepository))
+        self.notificationService = notificationService
+        self.appRouter = appRouter
+        _viewModel = StateObject(
+            wrappedValue: TripListViewModel(
+                repository: tripRepository,
+                notificationService: notificationService
+            )
+        )
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 TKBackground()
                 content
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .navigationTitle("Trips")
+            .navigationDestination(for: Trip.self) { trip in
+                TripDetailView(
+                    trip: trip,
+                    itineraryRepository: itineraryRepository,
+                    tripRepository: tripRepository,
+                    notificationService: notificationService,
+                    onChange: { Task { await viewModel.load() } }
+                )
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -49,6 +70,10 @@ struct TripListView: View {
             }
             .refreshable {
                 await viewModel.load()
+            }
+            .onChange(of: appRouter.pendingTripDetail, initial: true) { _, newRoute in
+                guard let newRoute else { return }
+                Task { await handlePendingRoute(newRoute) }
             }
             .alert(
                 "Something went wrong",
@@ -88,7 +113,9 @@ struct TripListView: View {
             if !viewModel.upcomingTrips.isEmpty {
                 Section {
                     ForEach(viewModel.upcomingTrips) { trip in
-                        tripLink(for: trip)
+                        NavigationLink(value: trip) {
+                            TripRow(trip: trip)
+                        }
                     }
                     .onDelete { indexSet in
                         let toDelete = indexSet.map { viewModel.upcomingTrips[$0] }
@@ -106,7 +133,9 @@ struct TripListView: View {
             if !viewModel.pastTrips.isEmpty {
                 Section {
                     ForEach(viewModel.pastTrips) { trip in
-                        tripLink(for: trip)
+                        NavigationLink(value: trip) {
+                            TripRow(trip: trip)
+                        }
                     }
                     .onDelete { indexSet in
                         let toDelete = indexSet.map { viewModel.pastTrips[$0] }
@@ -132,17 +161,14 @@ struct TripListView: View {
             .textCase(nil)
     }
 
-    private func tripLink(for trip: Trip) -> some View {
-        NavigationLink {
-            TripDetailView(
-                trip: trip,
-                itineraryRepository: itineraryRepository,
-                tripRepository: tripRepository,
-                onChange: { Task { await viewModel.load() } }
-            )
-        } label: {
-            TripRow(trip: trip)
+    private func handlePendingRoute(_ route: PendingTripRoute) async {
+        if let trip = try? await tripRepository.trip(with: route.tripId) {
+            navigationPath = NavigationPath()
+            navigationPath.append(trip)
         }
+        // Whether or not the trip resolved, clear the pending route so we don't
+        // keep trying. If the trip no longer exists, the user stays on the list.
+        appRouter.pendingTripDetail = nil
     }
 }
 
@@ -213,7 +239,9 @@ private struct TripRow: View {
     let stack = CoreDataStack.previewSeeded()
     TripListView(
         tripRepository: CoreDataTripRepository(stack: stack),
-        itineraryRepository: CoreDataItineraryRepository(stack: stack)
+        itineraryRepository: CoreDataItineraryRepository(stack: stack),
+        notificationService: UserNotificationSchedulingService(),
+        appRouter: AppRouter()
     )
 }
 
@@ -221,7 +249,9 @@ private struct TripRow: View {
     let stack = CoreDataStack(inMemory: true)
     TripListView(
         tripRepository: CoreDataTripRepository(stack: stack),
-        itineraryRepository: CoreDataItineraryRepository(stack: stack)
+        itineraryRepository: CoreDataItineraryRepository(stack: stack),
+        notificationService: UserNotificationSchedulingService(),
+        appRouter: AppRouter()
     )
 }
 #endif

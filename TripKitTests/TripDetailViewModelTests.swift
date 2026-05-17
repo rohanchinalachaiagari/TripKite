@@ -26,7 +26,8 @@ final class TripDetailViewModelTests: XCTestCase {
         let vm = TripDetailViewModel(
             trip: trip,
             itineraryRepository: itineraryMock,
-            tripRepository: tripMock
+            tripRepository: tripMock,
+            notificationService: MockNotificationSchedulingService()
         )
         await vm.load()
 
@@ -44,7 +45,8 @@ final class TripDetailViewModelTests: XCTestCase {
         let vm = TripDetailViewModel(
             trip: trip,
             itineraryRepository: itineraryMock,
-            tripRepository: tripMock
+            tripRepository: tripMock,
+            notificationService: MockNotificationSchedulingService()
         )
         await vm.load()
 
@@ -67,7 +69,8 @@ final class TripDetailViewModelTests: XCTestCase {
         let vm = TripDetailViewModel(
             trip: trip,
             itineraryRepository: itineraryMock,
-            tripRepository: tripMock
+            tripRepository: tripMock,
+            notificationService: MockNotificationSchedulingService()
         )
         await vm.load()
         XCTAssertEqual(vm.items.count, 1)
@@ -96,7 +99,8 @@ final class TripDetailViewModelTests: XCTestCase {
         let vm = TripDetailViewModel(
             trip: trip,
             itineraryRepository: itineraryMock,
-            tripRepository: tripMock
+            tripRepository: tripMock,
+            notificationService: MockNotificationSchedulingService()
         )
         await vm.load()
         await vm.deleteItem(item)
@@ -129,6 +133,7 @@ final class TripDetailViewModelTests: XCTestCase {
             trip: trip,
             itineraryRepository: itineraryMock,
             tripRepository: tripMock,
+            notificationService: MockNotificationSchedulingService(),
             now: { now }
         )
         await vm.load()
@@ -142,6 +147,7 @@ final class TripDetailViewModelTests: XCTestCase {
             trip: trip,
             itineraryRepository: MockItineraryRepository(),
             tripRepository: MockTripRepository(),
+            notificationService: MockNotificationSchedulingService(),
             now: { Date() }
         )
         XCTAssertNil(vm.focus)
@@ -158,11 +164,40 @@ final class TripDetailViewModelTests: XCTestCase {
         let vm = TripDetailViewModel(
             trip: original,
             itineraryRepository: itineraryMock,
-            tripRepository: tripMock
+            tripRepository: tripMock,
+            notificationService: MockNotificationSchedulingService()
         )
         await vm.refreshTrip()
 
         XCTAssertEqual(vm.trip.title, "Renamed")
+    }
+
+    func testDeleteItem_CancelsReminderBeforeDeletion() async {
+        let trip = makeTrip()
+        let item = ItineraryItem(
+            tripId: trip.id,
+            title: "Reminded",
+            type: .activity,
+            startDate: Date(),
+            reminderOffset: 600
+        )
+        let itineraryMock = MockItineraryRepository()
+        await itineraryMock.seed([item])
+        let notifications = MockNotificationSchedulingService()
+
+        let vm = TripDetailViewModel(
+            trip: trip,
+            itineraryRepository: itineraryMock,
+            tripRepository: MockTripRepository(),
+            notificationService: notifications
+        )
+        await vm.load()
+        await vm.deleteItem(item)
+
+        let cancellations = await notifications.itemCancellations
+        XCTAssertEqual(cancellations, [item.id])
+        let stored = await itineraryMock.storage[item.id]
+        XCTAssertNil(stored)
     }
 
     private func makeTrip() -> Trip {
