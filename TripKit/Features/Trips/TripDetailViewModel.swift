@@ -10,15 +10,22 @@ final class TripDetailViewModel: ObservableObject {
 
     private let itineraryRepository: ItineraryRepository
     private let tripRepository: TripRepository
+    private let now: @Sendable () -> Date
 
     init(
         trip: Trip,
         itineraryRepository: ItineraryRepository,
-        tripRepository: TripRepository
+        tripRepository: TripRepository,
+        now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.trip = trip
         self.itineraryRepository = itineraryRepository
         self.tripRepository = tripRepository
+        self.now = now
+    }
+
+    var focus: ItineraryFocus? {
+        ItineraryFocusResolver.resolve(items: items, now: now())
     }
 
     func load() async {
