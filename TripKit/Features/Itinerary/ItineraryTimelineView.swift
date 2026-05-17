@@ -2,6 +2,9 @@ import SwiftUI
 
 struct ItineraryTimelineView: View {
     let items: [ItineraryItem]
+    var onSelect: ((ItineraryItem) -> Void)? = nil
+    var onDelete: ((ItineraryItem) -> Void)? = nil
+    var onAddItem: (() -> Void)? = nil
 
     private var groupedByDay: [(day: Date, items: [ItineraryItem])] {
         let calendar = Calendar.current
@@ -15,39 +18,60 @@ struct ItineraryTimelineView: View {
 
     var body: some View {
         if items.isEmpty {
-            emptyState
+            Section {
+                TKEmptyStateView(
+                    systemImage: "calendar.badge.plus",
+                    title: "No itinerary items yet",
+                    message: "Add flights, hotels, and activities to build your trip timeline.",
+                    actionTitle: onAddItem != nil ? "Add your first item" : nil,
+                    actionSystemImage: "plus",
+                    action: onAddItem
+                )
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
+            }
         } else {
             ForEach(groupedByDay, id: \.day) { group in
                 Section {
                     ForEach(group.items) { item in
-                        ItineraryItemRow(item: item)
+                        row(for: item)
                     }
                 } header: {
                     Text(TripDateFormatter.dayHeader(group.day))
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .font(TKTypography.sectionHeader)
+                        .foregroundStyle(TKColors.textSecondary)
+                        .textCase(nil)
                 }
             }
         }
     }
 
-    private var emptyState: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "calendar.badge.plus")
-                .font(.largeTitle)
-                .foregroundStyle(.secondary)
-            Text("No itinerary items yet")
-                .font(.headline)
-            Text("Add flights, hotels, and activities to build your trip timeline.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+    @ViewBuilder
+    private func row(for item: ItineraryItem) -> some View {
+        let content = ItineraryItemRow(item: item)
+        if let onSelect {
+            Button {
+                onSelect(item)
+            } label: {
+                content
+            }
+            .buttonStyle(.plain)
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                if let onDelete {
+                    Button(role: .destructive) {
+                        onDelete(item)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+            }
+        } else {
+            content
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 32)
     }
 }
 
+#if DEBUG
 #Preview("With items") {
     List {
         ItineraryTimelineView(items: MockData.tokyoItinerary)
@@ -56,6 +80,7 @@ struct ItineraryTimelineView: View {
 
 #Preview("Empty") {
     List {
-        ItineraryTimelineView(items: [])
+        ItineraryTimelineView(items: [], onAddItem: {})
     }
 }
+#endif

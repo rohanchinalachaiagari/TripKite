@@ -3,37 +3,45 @@ import SwiftUI
 struct ItineraryItemRow: View {
     let item: ItineraryItem
 
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: item.type.systemImageName)
-                .font(.title3)
-                .frame(width: 32, height: 32)
-                .foregroundStyle(.white)
-                .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 8))
+    private var typeColor: Color { TKColors.itinerary(item.type) }
 
-            VStack(alignment: .leading, spacing: 4) {
+    var body: some View {
+        HStack(alignment: .top, spacing: TKSpacing.md) {
+            iconTile
+
+            VStack(alignment: .leading, spacing: TKSpacing.xs) {
                 Text(item.title)
-                    .font(.headline)
+                    .font(TKTypography.cardTitle)
+                    .foregroundStyle(TKColors.textPrimary)
                     .lineLimit(2)
 
                 Text(TripDateFormatter.timeRange(start: item.startDate, end: item.endDate))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .font(TKTypography.cardSubtitle)
+                    .foregroundStyle(TKColors.textSecondary)
 
                 if !item.locationName.isEmpty {
                     Label(item.locationName, systemImage: "mappin")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(TKTypography.metadata)
+                        .foregroundStyle(TKColors.textSecondary)
                         .lineLimit(1)
                 }
             }
 
             Spacer(minLength: 0)
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, TKSpacing.xs)
+    }
+
+    private var iconTile: some View {
+        Image(systemName: item.type.systemImageName)
+            .font(.title3)
+            .foregroundStyle(typeColor)
+            .frame(width: 36, height: 36)
+            .background(typeColor.opacity(0.18), in: RoundedRectangle(cornerRadius: TKRadius.small, style: .continuous))
     }
 }
 
+#if DEBUG
 #Preview {
     List {
         ForEach(MockData.tokyoItinerary) { item in
@@ -41,3 +49,4 @@ struct ItineraryItemRow: View {
         }
     }
 }
+#endif

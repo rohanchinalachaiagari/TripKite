@@ -37,9 +37,17 @@ extension CoreDataStack {
     static func previewSeeded() -> CoreDataStack {
         let stack = CoreDataStack(inMemory: true)
         let context = stack.viewContext
+        var tripEntitiesById: [UUID: TripEntity] = [:]
         for trip in MockData.trips {
             let entity = TripEntity(context: context)
             entity.apply(trip)
+            tripEntitiesById[trip.id] = entity
+        }
+        for item in MockData.allItineraryItems {
+            guard let tripEntity = tripEntitiesById[item.tripId] else { continue }
+            let entity = ItineraryItemEntity(context: context)
+            entity.apply(item)
+            entity.trip = tripEntity
         }
         try? context.save()
         return stack

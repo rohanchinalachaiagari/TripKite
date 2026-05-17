@@ -1,5 +1,5 @@
-import Combine
 import Foundation
+import Combine
 
 @MainActor
 final class TripListViewModel: ObservableObject {

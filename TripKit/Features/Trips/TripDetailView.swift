@@ -1,101 +1,175 @@
 import SwiftUI
 
 struct TripDetailView: View {
-    @State private var trip: Trip
-    let itineraryItems: [ItineraryItem]
-    private let repository: TripRepository
+    @StateObject private var viewModel: TripDetailViewModel
+    private let itineraryRepository: ItineraryRepository
+    private let tripRepository: TripRepository
     private let onChange: () -> Void
 
-    @State private var isEditing = false
+    @State private var isEditingTrip = false
+    @State private var isCreatingItem = false
+    @State private var editingItem: ItineraryItem?
 
     init(
         trip: Trip,
-        itineraryItems: [ItineraryItem],
-        repository: TripRepository,
+        itineraryRepository: ItineraryRepository,
+        tripRepository: TripRepository,
         onChange: @escaping () -> Void
     ) {
-        _trip = State(initialValue: trip)
-        self.itineraryItems = itineraryItems
-        self.repository = repository
+        self.itineraryRepository = itineraryRepository
+        self.tripRepository = tripRepository
         self.onChange = onChange
+        _viewModel = StateObject(
+            wrappedValue: TripDetailViewModel(
+                trip: trip,
+                itineraryRepository: itineraryRepository,
+                tripRepository: tripRepository
+            )
+        )
     }
 
     var body: some View {
-        List {
-            Section {
-                header
-            }
-            .listRowInsets(EdgeInsets())
-            .listRowBackground(Color.clear)
-
-            if !trip.notes.isEmpty {
-                Section("Notes") {
-                    Text(trip.notes)
-                        .font(.body)
+        ZStack {
+            TKBackground()
+            List {
+                Section {
+                    header
                 }
-            }
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
 
-            ItineraryTimelineView(items: itineraryItems)
+                if !viewModel.trip.notes.isEmpty {
+                    Section {
+                        Text(viewModel.trip.notes)
+                            .font(TKTypography.body)
+                            .foregroundStyle(TKColors.textPrimary)
+                    } header: {
+                        Label("Notes", systemImage: "note.text")
+                            .font(TKTypography.sectionHeader)
+                            .foregroundStyle(TKColors.textSecondary)
+                            .textCase(nil)
+                    }
+                }
+
+                ItineraryTimelineView(
+                    items: viewModel.items,
+                    onSelect: { item in editingItem = item },
+                    onDelete: { item in
+                        Task { await viewModel.deleteItem(item) }
+                    },
+                    onAddItem: { isCreatingItem = true }
+                )
+            }
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
         }
-        .listStyle(.insetGrouped)
-        .navigationTitle(trip.title)
+        .navigationTitle(viewModel.trip.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Edit") { isEditing = true }
+                Button {
+                    isCreatingItem = true
+                } label: {
+                    Label("Add Item", systemImage: "plus")
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Edit") { isEditingTrip = true }
             }
         }
-        .sheet(isPresented: $isEditing) {
+        .task {
+            if viewModel.items.isEmpty {
+                await viewModel.load()
+            }
+        }
+        .sheet(isPresented: $isEditingTrip) {
             NavigationStack {
                 TripEditorView(
-                    mode: .edit(trip),
-                    repository: repository,
+                    mode: .edit(viewModel.trip),
+                    repository: tripRepository,
                     onSaved: {
                         Task {
-                            if let updated = try? await repository.trip(with: trip.id) {
-                                trip = updated
-                            }
+                            await viewModel.refreshTrip()
                             onChange()
                         }
                     }
                 )
             }
         }
+        .sheet(isPresented: $isCreatingItem) {
+            NavigationStack {
+                ItineraryItemEditorView(
+                    mode: .create(
+                        tripId: viewModel.trip.id,
+                        defaultStartDate: viewModel.trip.startDate
+                    ),
+                    repository: itineraryRepository,
+                    onSaved: {
+                        Task { await viewModel.load() }
+                    }
+                )
+            }
+        }
+        .sheet(item: $editingItem) { item in
+            NavigationStack {
+                ItineraryItemEditorView(
+                    mode: .edit(item),
+                    repository: itineraryRepository,
+                    onSaved: {
+                        Task { await viewModel.load() }
+                    }
+                )
+            }
+        }
+        .alert(
+            "Something went wrong",
+            isPresented: Binding(
+                get: { viewModel.errorMessage != nil },
+                set: { if !$0 { viewModel.errorMessage = nil } }
+            ),
+            presenting: viewModel.errorMessage
+        ) { _ in
+            Button("OK", role: .cancel) { viewModel.errorMessage = nil }
+        } message: { message in
+            Text(message)
+        }
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(trip.destination)
-                .font(.title2.weight(.semibold))
-            Text(TripDateFormatter.dateRange(from: trip.startDate, to: trip.endDate))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            statusBadge
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
-        .padding(.horizontal)
-        .padding(.top, 8)
-    }
+        let status = viewModel.trip.status()
+        return VStack(alignment: .leading, spacing: TKSpacing.sm) {
+            HStack(alignment: .firstTextBaseline) {
+                Label(viewModel.trip.destination, systemImage: "mappin.and.ellipse")
+                    .font(TKTypography.heroTitle)
+                    .foregroundStyle(TKColors.textPrimary)
+                    .lineLimit(2)
+                Spacer(minLength: TKSpacing.sm)
+                TKBadge(text: status.displayName, color: TKColors.status(status))
+            }
 
-    private var statusBadge: some View {
-        Text(trip.status().displayName)
-            .font(.caption.weight(.semibold))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color.accentColor.opacity(0.2), in: Capsule())
-            .foregroundStyle(Color.accentColor)
+            Label(
+                TripDateFormatter.dateRange(from: viewModel.trip.startDate, to: viewModel.trip.endDate),
+                systemImage: "calendar"
+            )
+            .font(TKTypography.cardSubtitle)
+            .foregroundStyle(TKColors.textSecondary)
+        }
+        .tkCard(background: TKColors.brand.opacity(0.12))
+        .padding(.horizontal, TKSpacing.lg)
+        .padding(.top, TKSpacing.sm)
+        .padding(.bottom, TKSpacing.xs)
     }
 }
 
 #if DEBUG
 #Preview {
+    let stack = CoreDataStack.previewSeeded()
     NavigationStack {
         TripDetailView(
             trip: MockData.tokyoTrip,
-            itineraryItems: MockData.tokyoItinerary,
-            repository: CoreDataTripRepository(stack: .previewSeeded()),
+            itineraryRepository: CoreDataItineraryRepository(stack: stack),
+            tripRepository: CoreDataTripRepository(stack: stack),
             onChange: {}
         )
     }
