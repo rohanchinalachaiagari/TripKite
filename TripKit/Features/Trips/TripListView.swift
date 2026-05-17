@@ -1,63 +1,102 @@
 import SwiftUI
 
 struct TripListView: View {
-    let trips: [Trip]
+    @StateObject private var viewModel: TripListViewModel
+    private let repository: TripRepository
 
     @State private var isCreating = false
 
-    private var upcomingTrips: [Trip] {
-        trips
-            .filter { $0.status() != .past }
-            .sorted { $0.startDate < $1.startDate }
-    }
-
-    private var pastTrips: [Trip] {
-        trips
-            .filter { $0.status() == .past }
-            .sorted { $0.startDate > $1.startDate }
+    init(repository: TripRepository) {
+        self.repository = repository
+        _viewModel = StateObject(wrappedValue: TripListViewModel(repository: repository))
     }
 
     var body: some View {
         NavigationStack {
-            Group {
-                if trips.isEmpty {
-                    emptyState
-                } else {
-                    tripList
-                }
-            }
-            .navigationTitle("Trips")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        isCreating = true
-                    } label: {
-                        Label("New Trip", systemImage: "plus")
+            content
+                .navigationTitle("Trips")
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            isCreating = true
+                        } label: {
+                            Label("New Trip", systemImage: "plus")
+                        }
                     }
                 }
-            }
-            .sheet(isPresented: $isCreating) {
-                NavigationStack {
-                    TripEditorView(mode: .create)
+                .sheet(isPresented: $isCreating) {
+                    NavigationStack {
+                        TripEditorView(
+                            mode: .create,
+                            repository: repository,
+                            onSaved: { Task { await viewModel.load() } }
+                        )
+                    }
                 }
-            }
+                .task {
+                    if viewModel.trips.isEmpty {
+                        await viewModel.load()
+                    }
+                }
+                .refreshable {
+                    await viewModel.load()
+                }
+                .alert(
+                    "Something went wrong",
+                    isPresented: Binding(
+                        get: { viewModel.errorMessage != nil },
+                        set: { if !$0 { viewModel.errorMessage = nil } }
+                    ),
+                    presenting: viewModel.errorMessage
+                ) { _ in
+                    Button("OK", role: .cancel) { viewModel.errorMessage = nil }
+                } message: { message in
+                    Text(message)
+                }
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if viewModel.isLoading && viewModel.trips.isEmpty {
+            ProgressView()
+        } else if viewModel.trips.isEmpty {
+            emptyState
+        } else {
+            tripList
         }
     }
 
     private var tripList: some View {
         List {
-            if !upcomingTrips.isEmpty {
+            if !viewModel.upcomingTrips.isEmpty {
                 Section("Upcoming") {
-                    ForEach(upcomingTrips) { trip in
+                    ForEach(viewModel.upcomingTrips) { trip in
                         tripLink(for: trip)
+                    }
+                    .onDelete { indexSet in
+                        let toDelete = indexSet.map { viewModel.upcomingTrips[$0] }
+                        Task {
+                            for trip in toDelete {
+                                await viewModel.delete(trip)
+                            }
+                        }
                     }
                 }
             }
 
-            if !pastTrips.isEmpty {
+            if !viewModel.pastTrips.isEmpty {
                 Section("Past") {
-                    ForEach(pastTrips) { trip in
+                    ForEach(viewModel.pastTrips) { trip in
                         tripLink(for: trip)
+                    }
+                    .onDelete { indexSet in
+                        let toDelete = indexSet.map { viewModel.pastTrips[$0] }
+                        Task {
+                            for trip in toDelete {
+                                await viewModel.delete(trip)
+                            }
+                        }
                     }
                 }
             }
@@ -69,7 +108,9 @@ struct TripListView: View {
         NavigationLink {
             TripDetailView(
                 trip: trip,
-                itineraryItems: MockData.itineraryItems(for: trip)
+                itineraryItems: MockData.itineraryItems(for: trip),
+                repository: repository,
+                onChange: { Task { await viewModel.load() } }
             )
         } label: {
             TripRow(trip: trip)
@@ -110,10 +151,12 @@ private struct TripRow: View {
     }
 }
 
+#if DEBUG
 #Preview("With trips") {
-    TripListView(trips: MockData.trips)
+    TripListView(repository: CoreDataTripRepository(stack: .previewSeeded()))
 }
 
 #Preview("Empty") {
-    TripListView(trips: [])
+    TripListView(repository: CoreDataTripRepository(stack: CoreDataStack(inMemory: true)))
 }
+#endif

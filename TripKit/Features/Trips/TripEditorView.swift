@@ -1,92 +1,97 @@
 import SwiftUI
 
 struct TripEditorView: View {
-    enum Mode {
-        case create
-        case edit(Trip)
-
-        var navigationTitle: String {
-            switch self {
-            case .create: return "New Trip"
-            case .edit: return "Edit Trip"
-            }
-        }
-    }
-
-    let mode: Mode
+    @StateObject private var viewModel: TripEditorViewModel
+    private let onSaved: () -> Void
 
     @Environment(\.dismiss) private var dismiss
 
-    @State private var title: String
-    @State private var destination: String
-    @State private var startDate: Date
-    @State private var endDate: Date
-    @State private var notes: String
-
-    init(mode: Mode) {
-        self.mode = mode
-        switch mode {
-        case .create:
-            let now = Date()
-            _title = State(initialValue: "")
-            _destination = State(initialValue: "")
-            _startDate = State(initialValue: now)
-            _endDate = State(initialValue: Calendar.current.date(byAdding: .day, value: 3, to: now) ?? now)
-            _notes = State(initialValue: "")
-        case .edit(let trip):
-            _title = State(initialValue: trip.title)
-            _destination = State(initialValue: trip.destination)
-            _startDate = State(initialValue: trip.startDate)
-            _endDate = State(initialValue: trip.endDate)
-            _notes = State(initialValue: trip.notes)
-        }
-    }
-
-    private var isSaveDisabled: Bool {
-        title.trimmingCharacters(in: .whitespaces).isEmpty
-            || destination.trimmingCharacters(in: .whitespaces).isEmpty
-            || endDate < startDate
+    init(
+        mode: TripEditorViewModel.Mode,
+        repository: TripRepository,
+        onSaved: @escaping () -> Void
+    ) {
+        _viewModel = StateObject(
+            wrappedValue: TripEditorViewModel(mode: mode, repository: repository)
+        )
+        self.onSaved = onSaved
     }
 
     var body: some View {
         Form {
             Section("Trip") {
-                TextField("Title", text: $title)
-                TextField("Destination", text: $destination)
+                TextField("Title", text: $viewModel.title)
+                TextField("Destination", text: $viewModel.destination)
             }
 
             Section("Dates") {
-                DatePicker("Start", selection: $startDate, displayedComponents: .date)
-                DatePicker("End", selection: $endDate, in: startDate..., displayedComponents: .date)
+                DatePicker("Start", selection: $viewModel.startDate, displayedComponents: .date)
+                DatePicker(
+                    "End",
+                    selection: $viewModel.endDate,
+                    in: viewModel.startDate...,
+                    displayedComponents: .date
+                )
             }
 
             Section("Notes") {
-                TextField("Optional notes", text: $notes, axis: .vertical)
+                TextField("Optional notes", text: $viewModel.notes, axis: .vertical)
                     .lineLimit(3...6)
             }
         }
-        .navigationTitle(mode.navigationTitle)
+        .navigationTitle(viewModel.mode.navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Cancel") { dismiss() }
+                    .disabled(viewModel.isSaving)
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Save") { dismiss() }
-                    .disabled(isSaveDisabled)
+                Button("Save") {
+                    Task {
+                        let success = await viewModel.save()
+                        if success {
+                            onSaved()
+                            dismiss()
+                        }
+                    }
+                }
+                .disabled(viewModel.isSaveDisabled)
             }
+        }
+        .alert(
+            "Couldn't save trip",
+            isPresented: Binding(
+                get: { viewModel.errorMessage != nil },
+                set: { if !$0 { viewModel.errorMessage = nil } }
+            ),
+            presenting: viewModel.errorMessage
+        ) { _ in
+            Button("OK", role: .cancel) { viewModel.errorMessage = nil }
+        } message: { message in
+            Text(message)
         }
     }
 }
 
+#if DEBUG
 #Preview("Create") {
     NavigationStack {
-        TripEditorView(mode: .create)
+        TripEditorView(
+            mode: .create,
+            repository: CoreDataTripRepository(stack: CoreDataStack(inMemory: true)),
+            onSaved: {}
+        )
     }
 }
 
 #Preview("Edit") {
     NavigationStack {
-        TripEditorView(mode: .edit(MockData.tokyoTrip))
+        TripEditorView(
+            mode: .edit(MockData.tokyoTrip),
+            repository: CoreDataTripRepository(stack: .previewSeeded()),
+            onSaved: {}
+        )
     }
 }
+#endif

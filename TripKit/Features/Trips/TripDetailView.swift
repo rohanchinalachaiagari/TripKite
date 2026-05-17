@@ -1,10 +1,24 @@
 import SwiftUI
 
 struct TripDetailView: View {
-    let trip: Trip
+    @State private var trip: Trip
     let itineraryItems: [ItineraryItem]
+    private let repository: TripRepository
+    private let onChange: () -> Void
 
     @State private var isEditing = false
+
+    init(
+        trip: Trip,
+        itineraryItems: [ItineraryItem],
+        repository: TripRepository,
+        onChange: @escaping () -> Void
+    ) {
+        _trip = State(initialValue: trip)
+        self.itineraryItems = itineraryItems
+        self.repository = repository
+        self.onChange = onChange
+    }
 
     var body: some View {
         List {
@@ -33,7 +47,18 @@ struct TripDetailView: View {
         }
         .sheet(isPresented: $isEditing) {
             NavigationStack {
-                TripEditorView(mode: .edit(trip))
+                TripEditorView(
+                    mode: .edit(trip),
+                    repository: repository,
+                    onSaved: {
+                        Task {
+                            if let updated = try? await repository.trip(with: trip.id) {
+                                trip = updated
+                            }
+                            onChange()
+                        }
+                    }
+                )
             }
         }
     }
@@ -64,11 +89,15 @@ struct TripDetailView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     NavigationStack {
         TripDetailView(
             trip: MockData.tokyoTrip,
-            itineraryItems: MockData.tokyoItinerary
+            itineraryItems: MockData.tokyoItinerary,
+            repository: CoreDataTripRepository(stack: .previewSeeded()),
+            onChange: {}
         )
     }
 }
+#endif
