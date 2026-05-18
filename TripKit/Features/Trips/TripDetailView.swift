@@ -1,26 +1,39 @@
 import SwiftUI
+import UniformTypeIdentifiers
+import PhotosUI
 
 struct TripDetailView: View {
     @StateObject private var viewModel: TripDetailViewModel
+    @StateObject private var documentsViewModel: DocumentListViewModel
     private let itineraryRepository: ItineraryRepository
     private let tripRepository: TripRepository
     private let notificationService: NotificationSchedulingService
+    private let documentRepository: DocumentRepository
+    private let documentStorage: DocumentStorageService
     private let onChange: () -> Void
 
     @State private var isEditingTrip = false
     @State private var isCreatingItem = false
     @State private var editingItem: ItineraryItem?
+    @State private var isPickingFile = false
+    @State private var isPickingPhoto = false
+    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var previewURL: URL?
 
     init(
         trip: Trip,
         itineraryRepository: ItineraryRepository,
         tripRepository: TripRepository,
         notificationService: NotificationSchedulingService,
+        documentRepository: DocumentRepository,
+        documentStorage: DocumentStorageService,
         onChange: @escaping () -> Void
     ) {
         self.itineraryRepository = itineraryRepository
         self.tripRepository = tripRepository
         self.notificationService = notificationService
+        self.documentRepository = documentRepository
+        self.documentStorage = documentStorage
         self.onChange = onChange
         _viewModel = StateObject(
             wrappedValue: TripDetailViewModel(
@@ -28,6 +41,13 @@ struct TripDetailView: View {
                 itineraryRepository: itineraryRepository,
                 tripRepository: tripRepository,
                 notificationService: notificationService
+            )
+        )
+        _documentsViewModel = StateObject(
+            wrappedValue: DocumentListViewModel(
+                tripId: trip.id,
+                repository: documentRepository,
+                storage: documentStorage
             )
         )
     }
@@ -78,6 +98,13 @@ struct TripDetailView: View {
                     },
                     onAddItem: { isCreatingItem = true }
                 )
+
+                DocumentsSection(
+                    viewModel: documentsViewModel,
+                    isPickingFile: $isPickingFile,
+                    isPickingPhoto: $isPickingPhoto,
+                    previewURL: $previewURL
+                )
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
@@ -99,6 +126,9 @@ struct TripDetailView: View {
         .task {
             if viewModel.items.isEmpty {
                 await viewModel.load()
+            }
+            if documentsViewModel.documents.isEmpty {
+                await documentsViewModel.load()
             }
         }
         .sheet(isPresented: $isEditingTrip) {
@@ -144,18 +174,34 @@ struct TripDetailView: View {
                 )
             }
         }
-        .alert(
-            "Something went wrong",
-            isPresented: Binding(
-                get: { viewModel.errorMessage != nil },
-                set: { if !$0 { viewModel.errorMessage = nil } }
-            ),
-            presenting: viewModel.errorMessage
-        ) { _ in
-            Button("OK", role: .cancel) { viewModel.errorMessage = nil }
-        } message: { message in
-            Text(message)
+        .fileImporter(
+            isPresented: $isPickingFile,
+            allowedContentTypes: [.pdf, .image, .data],
+            allowsMultipleSelection: false
+        ) { result in
+            if case .success(let urls) = result, let url = urls.first {
+                Task { await documentsViewModel.attach(from: url) }
+            }
         }
+        .photosPicker(
+            isPresented: $isPickingPhoto,
+            selection: $selectedPhoto,
+            matching: .images
+        )
+        .onChange(of: selectedPhoto) { _, newValue in
+            guard let newValue else { return }
+            Task {
+                if let data = try? await newValue.loadTransferable(type: Data.self) {
+                    await documentsViewModel.attachPhoto(data: data, capturedAt: Date())
+                } else {
+                    documentsViewModel.errorMessage = "Couldn't read the selected photo."
+                }
+                selectedPhoto = nil
+            }
+        }
+        .quickLookSheet(url: $previewURL)
+        .errorAlert(title: "Something went wrong", message: $viewModel.errorMessage)
+        .errorAlert(title: "Couldn't update document", message: $documentsViewModel.errorMessage)
     }
 
     private var header: some View {
@@ -181,6 +227,27 @@ struct TripDetailView: View {
         .padding(.horizontal, TKSpacing.lg)
         .padding(.top, TKSpacing.sm)
         .padding(.bottom, TKSpacing.xs)
+    }
+}
+
+// Helper that collapses the common "alert when an optional String? error message
+// is non-nil, clear it on dismiss" pattern into a single modifier. Inlining two
+// of these in the view body exhausted the Swift type-checker's budget.
+private extension View {
+    func errorAlert(title: String, message: Binding<String?>) -> some View {
+        let isPresented = Binding<Bool>(
+            get: { message.wrappedValue != nil },
+            set: { newValue in if !newValue { message.wrappedValue = nil } }
+        )
+        return alert(
+            title,
+            isPresented: isPresented,
+            presenting: message.wrappedValue
+        ) { _ in
+            Button("OK", role: .cancel) { message.wrappedValue = nil }
+        } message: { text in
+            Text(text)
+        }
     }
 }
 
@@ -257,6 +324,8 @@ private struct FocusCard: View {
             itineraryRepository: CoreDataItineraryRepository(stack: stack),
             tripRepository: CoreDataTripRepository(stack: stack),
             notificationService: UserNotificationSchedulingService(),
+            documentRepository: CoreDataDocumentRepository(stack: stack),
+            documentStorage: FileManagerDocumentStorageService(),
             onChange: {}
         )
     }

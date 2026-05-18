@@ -6,6 +6,8 @@ struct TripKitApp: App {
     private let tripRepository: TripRepository
     private let itineraryRepository: ItineraryRepository
     private let notificationService: NotificationSchedulingService
+    private let documentRepository: DocumentRepository
+    private let documentStorage: DocumentStorageService
     private let notificationHandler: NotificationResponseHandler
 
     @StateObject private var appRouter: AppRouter
@@ -15,6 +17,8 @@ struct TripKitApp: App {
         self.tripRepository = CoreDataTripRepository(stack: stack)
         self.itineraryRepository = CoreDataItineraryRepository(stack: stack)
         self.notificationService = UserNotificationSchedulingService()
+        self.documentRepository = CoreDataDocumentRepository(stack: stack)
+        self.documentStorage = FileManagerDocumentStorageService()
 
         let router = AppRouter()
         let handler = NotificationResponseHandler(router: router)
@@ -29,6 +33,8 @@ struct TripKitApp: App {
                 tripRepository: tripRepository,
                 itineraryRepository: itineraryRepository,
                 notificationService: notificationService,
+                documentRepository: documentRepository,
+                documentStorage: documentStorage,
                 appRouter: appRouter
             )
         }

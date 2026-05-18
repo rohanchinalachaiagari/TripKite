@@ -6,6 +6,8 @@ struct TripListView: View {
     private let tripRepository: TripRepository
     private let itineraryRepository: ItineraryRepository
     private let notificationService: NotificationSchedulingService
+    private let documentRepository: DocumentRepository
+    private let documentStorage: DocumentStorageService
 
     @State private var navigationPath = NavigationPath()
     @State private var isCreating = false
@@ -14,16 +16,22 @@ struct TripListView: View {
         tripRepository: TripRepository,
         itineraryRepository: ItineraryRepository,
         notificationService: NotificationSchedulingService,
+        documentRepository: DocumentRepository,
+        documentStorage: DocumentStorageService,
         appRouter: AppRouter
     ) {
         self.tripRepository = tripRepository
         self.itineraryRepository = itineraryRepository
         self.notificationService = notificationService
+        self.documentRepository = documentRepository
+        self.documentStorage = documentStorage
         self.appRouter = appRouter
         _viewModel = StateObject(
             wrappedValue: TripListViewModel(
                 repository: tripRepository,
-                notificationService: notificationService
+                notificationService: notificationService,
+                documentRepository: documentRepository,
+                documentStorage: documentStorage
             )
         )
     }
@@ -42,6 +50,8 @@ struct TripListView: View {
                     itineraryRepository: itineraryRepository,
                     tripRepository: tripRepository,
                     notificationService: notificationService,
+                    documentRepository: documentRepository,
+                    documentStorage: documentStorage,
                     onChange: { Task { await viewModel.load() } }
                 )
             }
@@ -241,6 +251,8 @@ private struct TripRow: View {
         tripRepository: CoreDataTripRepository(stack: stack),
         itineraryRepository: CoreDataItineraryRepository(stack: stack),
         notificationService: UserNotificationSchedulingService(),
+        documentRepository: CoreDataDocumentRepository(stack: stack),
+        documentStorage: FileManagerDocumentStorageService(),
         appRouter: AppRouter()
     )
 }
@@ -251,6 +263,8 @@ private struct TripRow: View {
         tripRepository: CoreDataTripRepository(stack: stack),
         itineraryRepository: CoreDataItineraryRepository(stack: stack),
         notificationService: UserNotificationSchedulingService(),
+        documentRepository: CoreDataDocumentRepository(stack: stack),
+        documentStorage: FileManagerDocumentStorageService(),
         appRouter: AppRouter()
     )
 }
