@@ -1,5 +1,6 @@
 import Foundation
 
+#if DEBUG
 enum MockData {
     private static let calendar = Calendar(identifier: .gregorian)
 
@@ -152,3 +153,4 @@ enum MockData {
         allItineraryItems.filter { $0.tripId == trip.id }
     }
 }
+#endif

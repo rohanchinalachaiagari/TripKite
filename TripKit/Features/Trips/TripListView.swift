@@ -44,9 +44,10 @@ struct TripListView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .navigationTitle("Trips")
-            .navigationDestination(for: Trip.self) { trip in
+            .navigationDestination(for: TripDestination.self) { destination in
                 TripDetailView(
-                    trip: trip,
+                    trip: destination.trip,
+                    focusItemId: destination.focusItemId,
                     itineraryRepository: itineraryRepository,
                     tripRepository: tripRepository,
                     notificationService: notificationService,
@@ -123,7 +124,7 @@ struct TripListView: View {
             if !viewModel.upcomingTrips.isEmpty {
                 Section {
                     ForEach(viewModel.upcomingTrips) { trip in
-                        NavigationLink(value: trip) {
+                        NavigationLink(value: TripDestination(trip: trip)) {
                             TripRow(trip: trip)
                         }
                     }
@@ -143,7 +144,7 @@ struct TripListView: View {
             if !viewModel.pastTrips.isEmpty {
                 Section {
                     ForEach(viewModel.pastTrips) { trip in
-                        NavigationLink(value: trip) {
+                        NavigationLink(value: TripDestination(trip: trip)) {
                             TripRow(trip: trip)
                         }
                     }
@@ -174,7 +175,7 @@ struct TripListView: View {
     private func handlePendingRoute(_ route: PendingTripRoute) async {
         if let trip = try? await tripRepository.trip(with: route.tripId) {
             navigationPath = NavigationPath()
-            navigationPath.append(trip)
+            navigationPath.append(TripDestination(trip: trip, focusItemId: route.itemId))
         }
         // Whether or not the trip resolved, clear the pending route so we don't
         // keep trying. If the trip no longer exists, the user stays on the list.

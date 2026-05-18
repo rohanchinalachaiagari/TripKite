@@ -5,6 +5,7 @@ import PhotosUI
 struct TripDetailView: View {
     @StateObject private var viewModel: TripDetailViewModel
     @StateObject private var documentsViewModel: DocumentListViewModel
+    private let focusItemId: UUID?
     private let itineraryRepository: ItineraryRepository
     private let tripRepository: TripRepository
     private let notificationService: NotificationSchedulingService
@@ -19,9 +20,11 @@ struct TripDetailView: View {
     @State private var isPickingPhoto = false
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var previewURL: URL?
+    @State private var hasConsumedFocus = false
 
     init(
         trip: Trip,
+        focusItemId: UUID? = nil,
         itineraryRepository: ItineraryRepository,
         tripRepository: TripRepository,
         notificationService: NotificationSchedulingService,
@@ -29,6 +32,7 @@ struct TripDetailView: View {
         documentStorage: DocumentStorageService,
         onChange: @escaping () -> Void
     ) {
+        self.focusItemId = focusItemId
         self.itineraryRepository = itineraryRepository
         self.tripRepository = tripRepository
         self.notificationService = notificationService
@@ -132,6 +136,7 @@ struct TripDetailView: View {
             if documentsViewModel.documents.isEmpty {
                 await documentsViewModel.load()
             }
+            consumeFocusItemIfNeeded()
         }
         .sheet(isPresented: $isEditingTrip) {
             NavigationStack {
@@ -206,6 +211,17 @@ struct TripDetailView: View {
         .quickLookSheet(url: $previewURL)
         .errorAlert(title: "Something went wrong", message: $viewModel.errorMessage)
         .errorAlert(title: "Couldn't update document", message: $documentsViewModel.errorMessage)
+    }
+
+    // Opens the editor for the item identified by focusItemId. Fires at most
+    // once per view lifetime — back-navigation that re-runs `.task` won't
+    // re-present the editor if the user already dismissed it.
+    private func consumeFocusItemIfNeeded() {
+        guard !hasConsumedFocus, let focusItemId else { return }
+        hasConsumedFocus = true
+        if let match = viewModel.items.first(where: { $0.id == focusItemId }) {
+            editingItem = match
+        }
     }
 
     private var header: some View {

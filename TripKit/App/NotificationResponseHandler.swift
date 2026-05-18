@@ -26,4 +26,15 @@ final class NotificationResponseHandler: NSObject, UNUserNotificationCenterDeleg
         }
         completionHandler()
     }
+
+    // Show banner + sound while the app is foregrounded. Without this, iOS
+    // suppresses local notifications when the app is active and the user
+    // misses the reminder entirely.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound])
+    }
 }

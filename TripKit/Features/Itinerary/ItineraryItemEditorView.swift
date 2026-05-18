@@ -141,45 +141,11 @@ struct ItineraryItemEditorView: View {
     // reassign) stays in the trip-level Documents section. Tap previews via
     // QuickLook using the same flow the trip-level section uses.
     private func documentRow(for document: TravelDocument) -> some View {
-        Button {
-            previewURL = resolveDocumentURL?(document)
-        } label: {
-            HStack(alignment: .top, spacing: TKSpacing.md) {
-                Image(systemName: document.systemImageName)
-                    .font(.title3)
-                    .foregroundStyle(TKColors.brand)
-                    .frame(width: 36, height: 36)
-                    .background(
-                        TKColors.brand.opacity(0.18),
-                        in: RoundedRectangle(cornerRadius: TKRadius.small, style: .continuous)
-                    )
-
-                VStack(alignment: .leading, spacing: TKSpacing.xs) {
-                    Text(document.fileName)
-                        .font(TKTypography.cardTitle)
-                        .foregroundStyle(TKColors.textPrimary)
-                        .lineLimit(2)
-
-                    if let subtitle = documentSubtitle(for: document) {
-                        Text(subtitle)
-                            .font(TKTypography.metadata)
-                            .foregroundStyle(TKColors.textSecondary)
-                    }
-                }
-
-                Spacer(minLength: 0)
-            }
-            .padding(.vertical, TKSpacing.xs)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func documentSubtitle(for document: TravelDocument) -> String? {
-        let size = document.fileSize.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) }
-        let type = document.fileType.isEmpty ? nil : document.fileType.uppercased()
-        let parts = [size, type].compactMap { $0 }
-        return parts.isEmpty ? nil : parts.joined(separator: " • ")
+        DocumentRowView(
+            document: document,
+            subtitle: DocumentRowSubtitle.make(for: document),
+            onTap: { previewURL = resolveDocumentURL?(document) }
+        )
     }
 }
 
