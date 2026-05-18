@@ -145,6 +145,30 @@ final class DocumentListViewModel: ObservableObject {
         }
     }
 
+    // Updates only the item association. Trip is never changed; display name
+    // and file type are untouched. Pass `nil` to move the document back to
+    // trip-level.
+    func setAssociation(for document: TravelDocument, itineraryItemId: UUID?) async {
+        var updated = document
+        updated.itineraryItemId = itineraryItemId
+
+        do {
+            try await repository.updateDocument(updated)
+            if let index = documents.firstIndex(where: { $0.id == updated.id }) {
+                documents[index] = updated
+            }
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    // Set of itinerary item IDs that have at least one document attached. Used
+    // by the timeline to render the paperclip indicator on each item row.
+    var itemIdsWithAttachments: Set<UUID> {
+        Set(documents.compactMap(\.itineraryItemId))
+    }
+
     // Drops a trailing ".{fileType}" from `name` (case-insensitive match on the
     // extension portion only — the user's casing of the visible name is kept).
     // Returns `name` unchanged when there's no fileType, when the name doesn't

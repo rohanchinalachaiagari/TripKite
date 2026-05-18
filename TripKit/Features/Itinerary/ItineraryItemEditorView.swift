@@ -3,14 +3,19 @@ import SwiftUI
 struct ItineraryItemEditorView: View {
     @StateObject private var viewModel: ItineraryItemEditorViewModel
     private let onSaved: () -> Void
+    private let associatedDocuments: [TravelDocument]
+    private let resolveDocumentURL: ((TravelDocument) -> URL?)?
 
     @Environment(\.dismiss) private var dismiss
+    @State private var previewURL: URL?
 
     init(
         mode: ItineraryItemEditorViewModel.Mode,
         repository: ItineraryRepository,
         notificationService: NotificationSchedulingService,
         tripRange: ClosedRange<Date>? = nil,
+        associatedDocuments: [TravelDocument] = [],
+        resolveDocumentURL: ((TravelDocument) -> URL?)? = nil,
         onSaved: @escaping () -> Void
     ) {
         _viewModel = StateObject(
@@ -21,6 +26,8 @@ struct ItineraryItemEditorView: View {
                 tripRange: tripRange
             )
         )
+        self.associatedDocuments = associatedDocuments
+        self.resolveDocumentURL = resolveDocumentURL
         self.onSaved = onSaved
     }
 
@@ -65,6 +72,14 @@ struct ItineraryItemEditorView: View {
                 TextField("Confirmation number", text: $viewModel.confirmationNumber)
                 TextField("Notes", text: $viewModel.notes, axis: .vertical)
                     .lineLimit(3...6)
+            }
+
+            if !associatedDocuments.isEmpty {
+                Section("Documents") {
+                    ForEach(associatedDocuments) { document in
+                        documentRow(for: document)
+                    }
+                }
             }
         }
         .navigationTitle(viewModel.mode.navigationTitle)
@@ -119,6 +134,52 @@ struct ItineraryItemEditorView: View {
         } message: {
             Text("This item starts outside your trip dates. Save it anyway?")
         }
+        .quickLookSheet(url: $previewURL)
+    }
+
+    // Compact read-only document row. Document management (rename, delete,
+    // reassign) stays in the trip-level Documents section. Tap previews via
+    // QuickLook using the same flow the trip-level section uses.
+    private func documentRow(for document: TravelDocument) -> some View {
+        Button {
+            previewURL = resolveDocumentURL?(document)
+        } label: {
+            HStack(alignment: .top, spacing: TKSpacing.md) {
+                Image(systemName: document.systemImageName)
+                    .font(.title3)
+                    .foregroundStyle(TKColors.brand)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        TKColors.brand.opacity(0.18),
+                        in: RoundedRectangle(cornerRadius: TKRadius.small, style: .continuous)
+                    )
+
+                VStack(alignment: .leading, spacing: TKSpacing.xs) {
+                    Text(document.fileName)
+                        .font(TKTypography.cardTitle)
+                        .foregroundStyle(TKColors.textPrimary)
+                        .lineLimit(2)
+
+                    if let subtitle = documentSubtitle(for: document) {
+                        Text(subtitle)
+                            .font(TKTypography.metadata)
+                            .foregroundStyle(TKColors.textSecondary)
+                    }
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, TKSpacing.xs)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func documentSubtitle(for document: TravelDocument) -> String? {
+        let size = document.fileSize.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) }
+        let type = document.fileType.isEmpty ? nil : document.fileType.uppercased()
+        let parts = [size, type].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " • ")
     }
 }
 

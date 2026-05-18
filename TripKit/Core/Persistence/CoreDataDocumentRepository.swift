@@ -62,9 +62,18 @@ nonisolated final class CoreDataDocumentRepository: DocumentRepository, @uncheck
             guard let entity = try Self.fetchDocumentEntity(with: document.id, in: context) else {
                 throw DocumentRepositoryError.notFound
             }
-            // Only scalar metadata is rewritten. The trip/item relationships
-            // and `localRelativePath` aren't moved — rename never touches the
-            // file on disk.
+            // Reconcile the `item` relationship from the domain model.
+            // `trip` is intentionally never updated here — documents do not
+            // move between trips. If reconciliation throws, no scalar changes
+            // have happened yet and the context is discarded on return.
+            if let itemId = document.itineraryItemId {
+                guard let item = try Self.fetchItemEntity(with: itemId, in: context) else {
+                    throw DocumentRepositoryError.itemNotFound
+                }
+                entity.item = item
+            } else {
+                entity.item = nil
+            }
             entity.apply(document)
             try context.save()
         }

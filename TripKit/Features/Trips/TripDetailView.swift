@@ -92,6 +92,7 @@ struct TripDetailView: View {
 
                 ItineraryTimelineView(
                     items: viewModel.items,
+                    attachedItemIds: documentsViewModel.itemIdsWithAttachments,
                     onSelect: { item in editingItem = item },
                     onDelete: { item in
                         Task { await viewModel.deleteItem(item) }
@@ -101,6 +102,7 @@ struct TripDetailView: View {
 
                 DocumentsSection(
                     viewModel: documentsViewModel,
+                    itineraryItems: viewModel.items,
                     isPickingFile: $isPickingFile,
                     isPickingPhoto: $isPickingPhoto,
                     previewURL: $previewURL
@@ -168,6 +170,8 @@ struct TripDetailView: View {
                     repository: itineraryRepository,
                     notificationService: notificationService,
                     tripRange: viewModel.trip.startDate...viewModel.trip.endDate,
+                    associatedDocuments: documentsViewModel.documents.attached(toItemId: item.id),
+                    resolveDocumentURL: { documentsViewModel.absoluteURL(for: $0) },
                     onSaved: {
                         Task { await viewModel.load() }
                     }

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ItineraryTimelineView: View {
     let items: [ItineraryItem]
+    var attachedItemIds: Set<UUID> = []
     var onSelect: ((ItineraryItem) -> Void)? = nil
     var onDelete: ((ItineraryItem) -> Void)? = nil
     var onAddItem: (() -> Void)? = nil
@@ -48,7 +49,7 @@ struct ItineraryTimelineView: View {
 
     @ViewBuilder
     private func row(for item: ItineraryItem) -> some View {
-        let content = ItineraryItemRow(item: item)
+        let content = ItineraryItemRow(item: item, hasAttachments: attachedItemIds.contains(item.id))
         if let onSelect {
             Button {
                 onSelect(item)

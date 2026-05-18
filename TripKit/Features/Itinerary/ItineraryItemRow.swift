@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ItineraryItemRow: View {
     let item: ItineraryItem
+    var hasAttachments: Bool = false
 
     private var typeColor: Color { TKColors.itinerary(item.type) }
 
@@ -28,6 +29,13 @@ struct ItineraryItemRow: View {
             }
 
             Spacer(minLength: 0)
+
+            if hasAttachments {
+                Image(systemName: "paperclip")
+                    .font(TKTypography.metadata)
+                    .foregroundStyle(TKColors.textSecondary)
+                    .accessibilityLabel("Has documents")
+            }
         }
         .padding(.vertical, TKSpacing.xs)
     }
@@ -45,7 +53,7 @@ struct ItineraryItemRow: View {
 #Preview {
     List {
         ForEach(MockData.tokyoItinerary) { item in
-            ItineraryItemRow(item: item)
+            ItineraryItemRow(item: item, hasAttachments: item.type == .flight)
         }
     }
 }

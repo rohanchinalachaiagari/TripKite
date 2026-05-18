@@ -102,6 +102,69 @@ final class CoreDataDocumentRepositoryTests: XCTestCase {
         XCTAssertEqual(fetched?.localRelativePath, doc.localRelativePath)
     }
 
+    func testUpdateDocument_AssigningToItem_PersistsRelationship() async throws {
+        let item = ItineraryItem(
+            tripId: trip.id,
+            title: "Flight",
+            type: .flight,
+            startDate: Date()
+        )
+        try await itineraryRepository.createItem(item)
+
+        var doc = makeDocument(name: "Boarding pass", tripId: trip.id)
+        try await repository.createDocument(doc)
+
+        doc.itineraryItemId = item.id
+        try await repository.updateDocument(doc)
+
+        let fetched = try await repository.document(with: doc.id)
+        XCTAssertEqual(fetched?.itineraryItemId, item.id)
+
+        let byItem = try await repository.fetchDocuments(forItemId: item.id)
+        XCTAssertEqual(byItem.map(\.id), [doc.id])
+    }
+
+    func testUpdateDocument_ClearingItem_RemovesRelationship() async throws {
+        let item = ItineraryItem(
+            tripId: trip.id,
+            title: "Hotel",
+            type: .hotel,
+            startDate: Date()
+        )
+        try await itineraryRepository.createItem(item)
+
+        var doc = makeDocument(name: "Confirmation", tripId: trip.id)
+        doc.itineraryItemId = item.id
+        try await repository.createDocument(doc)
+
+        doc.itineraryItemId = nil
+        try await repository.updateDocument(doc)
+
+        let fetched = try await repository.document(with: doc.id)
+        XCTAssertNil(fetched?.itineraryItemId)
+
+        let byItem = try await repository.fetchDocuments(forItemId: item.id)
+        XCTAssertTrue(byItem.isEmpty)
+
+        let byTrip = try await repository.fetchDocuments(for: trip.id)
+        XCTAssertEqual(byTrip.map(\.id), [doc.id], "Document should still belong to the trip")
+    }
+
+    func testUpdateDocument_WhenNewItemMissing_ThrowsItemNotFound() async throws {
+        var doc = makeDocument(name: "Floating", tripId: trip.id)
+        try await repository.createDocument(doc)
+
+        doc.itineraryItemId = UUID()
+        do {
+            try await repository.updateDocument(doc)
+            XCTFail("Expected updateDocument to throw itemNotFound")
+        } catch let error as DocumentRepositoryError {
+            XCTAssertEqual(error, .itemNotFound)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
     func testUpdateDocument_WhenMissing_ThrowsNotFound() async {
         let doc = makeDocument(name: "Ghost", tripId: trip.id)
         do {

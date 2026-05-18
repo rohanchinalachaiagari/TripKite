@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DocumentsSection: View {
     @ObservedObject var viewModel: DocumentListViewModel
+    let itineraryItems: [ItineraryItem]
     @Binding var isPickingFile: Bool
     @Binding var isPickingPhoto: Bool
     @Binding var previewURL: URL?
@@ -105,6 +106,9 @@ struct DocumentsSection: View {
             } label: {
                 Label("Rename", systemImage: "pencil")
             }
+            if !itineraryItems.isEmpty {
+                assignToMenu(for: document)
+            }
             Button(role: .destructive) {
                 Task { await viewModel.delete(document) }
             } label: {
@@ -173,7 +177,31 @@ struct DocumentsSection: View {
     private func subtitle(for document: TravelDocument) -> String? {
         let size = document.fileSize.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) }
         let type = document.fileType.isEmpty ? nil : document.fileType.uppercased()
-        let parts = [size, type].compactMap { $0 }
+        let itemTitle = document.itineraryItemId.flatMap { id in
+            itineraryItems.first(where: { $0.id == id })?.title
+        }
+        let parts = [size, type, itemTitle].compactMap { $0 }
         return parts.isEmpty ? nil : parts.joined(separator: " • ")
+    }
+
+    @ViewBuilder
+    private func assignToMenu(for document: TravelDocument) -> some View {
+        Menu {
+            Button {
+                Task { await viewModel.setAssociation(for: document, itineraryItemId: nil) }
+            } label: {
+                Label("Entire trip", systemImage: "suitcase")
+            }
+            Divider()
+            ForEach(itineraryItems) { item in
+                Button {
+                    Task { await viewModel.setAssociation(for: document, itineraryItemId: item.id) }
+                } label: {
+                    Label(item.title, systemImage: item.type.systemImageName)
+                }
+            }
+        } label: {
+            Label("Assign to…", systemImage: "paperclip")
+        }
     }
 }

@@ -76,6 +76,9 @@ final actor MockDocumentRepository: DocumentRepository {
         guard storage[document.id] != nil else {
             throw DocumentRepositoryError.notFound
         }
+        if let itemId = document.itineraryItemId, !existingItemIds.contains(itemId) {
+            throw DocumentRepositoryError.itemNotFound
+        }
         storage[document.id] = document
     }
 

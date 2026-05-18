@@ -233,6 +233,90 @@ final class DocumentListViewModelTests: XCTestCase {
         XCTAssertNotNil(vm.errorMessage)
     }
 
+    // MARK: - Item association
+
+    func testSetAssociation_AssigningToItem_UpdatesInMemoryAndPersists() async {
+        let tripId = UUID()
+        let itemId = UUID()
+        let original = TravelDocument(
+            tripId: tripId,
+            fileName: "Boarding pass",
+            localRelativePath: "Attachments/x.pdf",
+            fileType: "pdf"
+        )
+        let repo = MockDocumentRepository()
+        await repo.seed([original])
+        await repo.seedItemIds([itemId])
+        let storage = MockDocumentStorageService()
+
+        let vm = DocumentListViewModel(tripId: tripId, repository: repo, storage: storage)
+        await vm.load()
+        await vm.setAssociation(for: original, itineraryItemId: itemId)
+
+        XCTAssertEqual(vm.documents.first?.itineraryItemId, itemId)
+        let stored = await repo.storage[original.id]
+        XCTAssertEqual(stored?.itineraryItemId, itemId)
+        let updateCount = await repo.updateCallCount
+        XCTAssertEqual(updateCount, 1)
+        XCTAssertNil(vm.errorMessage)
+    }
+
+    func testSetAssociation_ClearingToTripLevel_UpdatesInMemoryAndPersists() async {
+        let tripId = UUID()
+        let itemId = UUID()
+        let original = TravelDocument(
+            tripId: tripId,
+            itineraryItemId: itemId,
+            fileName: "Boarding pass",
+            localRelativePath: "Attachments/x.pdf",
+            fileType: "pdf"
+        )
+        let repo = MockDocumentRepository()
+        await repo.seed([original])
+        let storage = MockDocumentStorageService()
+
+        let vm = DocumentListViewModel(tripId: tripId, repository: repo, storage: storage)
+        await vm.load()
+        await vm.setAssociation(for: original, itineraryItemId: nil)
+
+        XCTAssertNil(vm.documents.first?.itineraryItemId)
+        let stored = await repo.storage[original.id]
+        XCTAssertNil(stored?.itineraryItemId)
+    }
+
+    func testItemIdsWithAttachments_ReturnsUniqueIdsAndIgnoresTripLevelDocs() async {
+        let tripId = UUID()
+        let itemA = UUID()
+        let docA1 = TravelDocument(
+            tripId: tripId,
+            itineraryItemId: itemA,
+            fileName: "A1",
+            localRelativePath: "Attachments/a1.pdf",
+            fileType: "pdf"
+        )
+        let docA2 = TravelDocument(
+            tripId: tripId,
+            itineraryItemId: itemA,
+            fileName: "A2",
+            localRelativePath: "Attachments/a2.pdf",
+            fileType: "pdf"
+        )
+        let tripLevel = TravelDocument(
+            tripId: tripId,
+            fileName: "Trip-level",
+            localRelativePath: "Attachments/t.pdf",
+            fileType: "pdf"
+        )
+        let repo = MockDocumentRepository()
+        await repo.seed([docA1, docA2, tripLevel])
+        let storage = MockDocumentStorageService()
+
+        let vm = DocumentListViewModel(tripId: tripId, repository: repo, storage: storage)
+        await vm.load()
+
+        XCTAssertEqual(vm.itemIdsWithAttachments, Set([itemA]))
+    }
+
     func testDelete_RemovesRecordThenFile() async {
         let tripId = UUID()
         let doc = TravelDocument(
