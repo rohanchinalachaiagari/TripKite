@@ -2,7 +2,7 @@
 
 **An offline-first iOS travel companion built in SwiftUI.**
 
-TripKit keeps trips, itinerary items, travel documents, and reminders in one place — and works without a network connection.
+TripKit keeps trips, itinerary items, travel documents, and reminders in one place. It all works without a network connection.
 
 ![Trip List](Screenshots/trip-list.png)
 
@@ -107,7 +107,7 @@ No third-party packages.
 The schema has three entities (`TripEntity`, `ItineraryItemEntity`, `TravelDocumentEntity`) connected by `Cascade` / `Nullify` rules so deletes behave correctly:
 
 - Deleting a trip cascades to its items and document records.
-- Deleting an item nullifies the relationship on associated documents — the document is preserved at trip level rather than vanishing.
+- Deleting an item nullifies the relationship on associated documents. The document is preserved at trip level rather than vanishing.
 - Deleting a document removes only its record (and, separately, the file on disk).
 
 Each entity has a `UUID` `id` with a uniqueness constraint and `NSMergeByPropertyObjectTrumpMergePolicy` configured on every background context.
@@ -128,13 +128,13 @@ protocol TripRepository: Sendable {
 
 ## Local Notifications & Reminders
 
-Reminders are pure local notifications — no APNs, no server. The user picks a preset offset on the item editor (e.g. "15 minutes before"); the editor saves the item, then asks `NotificationSchedulingService` to cancel any prior reminder for that item id and schedule a fresh one.
+Reminders are pure local notifications. The user picks a preset offset on the item editor (e.g. "15 minutes before"); the editor saves the item, then asks `NotificationSchedulingService` to cancel any prior reminder for that item id and schedule a fresh one.
 
 The scheduling service builds an identifier of the form `trip-<tripId>-item-<itemId>`, which lets it cancel a single reminder by item id or every reminder for a trip on deletion.
 
 Permission handling:
 
-- Authorization is requested lazily — the first time the user changes the reminder picker away from "None."
+- Authorization is requested lazily. The first time the user changes the reminder picker away from "None."
 - If the user denies, the editor surfaces an inline hint pointing them to Settings.
 - Scheduling errors (e.g. the reminder time is already in the past) are non-fatal; the item still saves.
 
