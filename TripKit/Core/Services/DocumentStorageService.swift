@@ -44,9 +44,9 @@ enum DocumentStorageError: LocalizedError, Equatable {
         case .sourceUnreadable:
             return "Couldn't read the selected file."
         case .destinationUnwritable:
-            return "Couldn't save the file to TripKit."
+            return "Couldn't save the file to TripKite."
         case .sandboxUnavailable:
-            return "TripKit's storage location is unavailable."
+            return "TripKite's storage location is unavailable."
         case .fileTooLarge(let maxBytes):
             let formatted = ByteCountFormatter.string(fromByteCount: maxBytes, countStyle: .file)
             return "This file is too large. Attachments must be \(formatted) or smaller."

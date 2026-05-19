@@ -7,7 +7,7 @@
 
 import XCTest
 
-final class TripKitUITestsLaunchTests: XCTestCase {
+final class TripKiteUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

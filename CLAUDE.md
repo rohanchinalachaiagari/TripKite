@@ -2,9 +2,11 @@
 
 This file provides guidance to Claude Code when working in this repository.
 
-# TripKit
+# TripKite
 
-TripKit is an offline-first iOS travel companion app built with SwiftUI. Users can create trips, add itinerary items, attach travel documents, schedule reminders, and view their trip timeline without requiring network access.
+TripKite is an offline-first iOS travel companion app built with SwiftUI. Users can create trips, add itinerary items, attach travel documents, schedule reminders, and view their trip timeline without requiring network access.
+
+(The on-disk Xcode project, scheme, and Swift module are still named `TripKit` for historical reasons. The product ships as **TripKite**.)
 
 The goal of this project is to demonstrate production-style iOS engineering: clean architecture, local persistence, dependency injection, testability, offline-first design, and thoughtful mobile-specific behavior.
 
@@ -12,7 +14,7 @@ The goal of this project is to demonstrate production-style iOS engineering: cle
 
 ## Product Vision
 
-TripKit helps users keep all important trip information in one place:
+TripKite helps users keep all important trip information in one place:
 
 - Upcoming and past trips
 - Flights, hotels, activities, restaurants, and transportation
@@ -100,7 +102,7 @@ Avoid adding third-party packages unless there is a strong reason. Prefer Apple-
 
 ## Architecture
 
-TripKit should use MVVM with a repository and service layer.
+TripKite should use MVVM with a repository and service layer.
 
 Preferred dependency direction:
 
@@ -135,7 +137,7 @@ Views should not directly access Core Data, FileManager, UserNotifications, or o
 ```text
 TripKit/
   App/
-    TripKitApp.swift
+    TripKiteApp.swift
     AppRouter.swift
 
   Core/
@@ -763,5 +765,5 @@ This order keeps the project understandable and prevents premature complexity.
 
 The finished project should be something that can be explained in interviews as:
 
-> TripKit is an offline-first SwiftUI travel companion app that lets users manage trips, itinerary items, documents, and reminders locally. I built it with MVVM, protocol-based repositories, Core Data persistence, local notification scheduling, document storage, and unit-testable architecture. The main engineering focus was designing a small app with production-style separation of concerns and future sync readiness.
+> TripKite is an offline-first SwiftUI travel companion app that lets users manage trips, itinerary items, documents, and reminders locally. I built it with MVVM, protocol-based repositories, Core Data persistence, local notification scheduling, document storage, and unit-testable architecture. The main engineering focus was designing a small app with production-style separation of concerns and future sync readiness.
 

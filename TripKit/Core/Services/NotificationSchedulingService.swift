@@ -24,7 +24,7 @@ enum NotificationSchedulingError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .authorizationDenied:
-            return "Notifications are turned off for TripKit."
+            return "Notifications are turned off for TripKite."
         case .reminderDateInPast:
             return "The reminder time has already passed."
         case .noReminderConfigured:

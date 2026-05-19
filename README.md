@@ -1,8 +1,8 @@
-# TripKit
+# TripKite
 
 **An offline-first iOS travel companion built in SwiftUI.**
 
-TripKit keeps trips, itinerary items, travel documents, and reminders in one place. It all works without a network connection.
+TripKite keeps trips, itinerary items, travel documents, and reminders in one place. It all works without a network connection.
 
 ![Trip List](Screenshots/trip-list.png)
 
@@ -10,7 +10,7 @@ TripKit keeps trips, itinerary items, travel documents, and reminders in one pla
 
 ## Overview
 
-TripKit is a focused iOS app for organizing personal travel. Users can create trips, add itinerary items (flights, hotels, activities, restaurants, transportation, notes), attach local documents, and schedule local reminders for upcoming events. All data is stored on-device using Core Data and the app sandbox.
+TripKite is a focused iOS app for organizing personal travel. Users can create trips, add itinerary items (flights, hotels, activities, restaurants, transportation, notes), attach local documents, and schedule local reminders for upcoming events. All data is stored on-device using Core Data and the app sandbox.
 
 The project is a small surface area built with production-style engineering: clean architecture, protocol-based dependency injection, local persistence, testable view models, and offline-first behavior.
 
@@ -20,7 +20,7 @@ The project is a small surface area built with production-style engineering: cle
 
 ## Motivation
 
-Travel apps are a natural fit for offline-first design: connectivity is unpredictable exactly when an itinerary matters most. TripKit was built as a portfolio project that holds itself to the same constraints a real product would:
+Travel apps are a natural fit for offline-first design: connectivity is unpredictable exactly when an itinerary matters most. TripKite was built as a portfolio project that holds itself to the same constraints a real product would:
 
 - Apple-native frameworks only — no third-party packages, no networking, no backend.
 - Architecture shaped so cloud sync could be added later without a rewrite.
@@ -79,7 +79,7 @@ Concrete implementation (Core Data / FileManager / UserNotifications)
 - Domain logic that isn't presentation lives in standalone enums (`TripValidator`, `ItineraryValidator`, `ItineraryFocusResolver`, `ImageFormatDetection`).
 - `AppRouter` carries deep-link intent from notification taps into the navigation stack.
 
-The dependency graph is constructed once in `TripKitApp.init` and threaded down through initializers.
+The dependency graph is constructed once in `TripKiteApp.init` and threaded down through initializers.
 
 ---
 
@@ -258,8 +258,8 @@ Out of scope for V1 and explicitly not yet implemented:
 **Steps**
 
 ```bash
-git clone https://github.com/<your-username>/TripKit.git
-cd TripKit
+git clone https://github.com/<your-username>/TripKite.git
+cd TripKite
 open TripKit.xcodeproj
 ```
 
@@ -270,7 +270,7 @@ In Xcode:
 3. Press **⌘R** to run.
 4. Press **⌘U** to run the test suite.
 
-No package resolution or signing setup is required for simulator builds.
+No package resolution or signing setup is required for simulator builds. The product builds and ships as **TripKite**; the underlying Xcode project, scheme, and module are still named `TripKit` for historical reasons.
 
 ---
 
@@ -289,7 +289,7 @@ A few design choices worth calling out:
 - **Pure-Swift domain models with a mapping boundary.** `NSManagedObject` subclasses never leak out of the persistence layer. View models and tests work exclusively with `Sendable` value types, which keeps the test suite fast and the rest of the codebase decoupled from Core Data.
 - **A fresh background context per repository call.** Reads and writes never block the main thread, and each call is its own transactional boundary. Repository tests use real in-memory Core Data stacks rather than mocking Core Data itself — Core Data's behavior is too load-bearing to mock cheaply.
 - **Files outside Core Data, metadata inside.** Document bytes live in the app sandbox under a UUID filename; only metadata is persisted. The two-write sequence has an explicit rollback so a failed metadata write doesn't leave orphan files on disk.
-- **Protocol-based dependency injection without a framework.** The graph is built once in `TripKitApp.init` and threaded down through view initializers. Each system capability (notifications, document storage) sits behind a `Sendable` protocol that mocks satisfy directly.
+- **Protocol-based dependency injection without a framework.** The graph is built once in `TripKiteApp.init` and threaded down through view initializers. Each system capability (notifications, document storage) sits behind a `Sendable` protocol that mocks satisfy directly.
 - **Single notification identifier scheme.** `trip-<tripId>-item-<itemId>` lets the scheduling service cancel a single reminder by item id or every reminder for a trip on deletion using a single substring match — no separate index needed.
 - **Deep-link routing as a navigation value.** Notification taps produce a `PendingTripRoute`, which becomes a `TripDestination { trip, focusItemId }` pushed onto the navigation stack. The detail view consumes `focusItemId` once after items load. Routing intent lives in the navigation layer rather than as state shared between the router and the detail screen.
 - **Deferred Core Data migration scaffolding.** The schema is intentionally at version 1. Migration setup is straightforward to add when the first schema change is needed; adding it preemptively would be premature complexity.

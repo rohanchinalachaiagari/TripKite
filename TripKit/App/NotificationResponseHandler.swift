@@ -2,7 +2,7 @@ import Foundation
 import UserNotifications
 
 // Bridges the UNUserNotificationCenter delegate callback (called on an arbitrary
-// queue) to the MainActor-isolated AppRouter. Held strongly by TripKitApp so the
+// queue) to the MainActor-isolated AppRouter. Held strongly by TripKiteApp so the
 // system's weak delegate reference stays alive for the app's lifetime.
 final class NotificationResponseHandler: NSObject, UNUserNotificationCenterDelegate, @unchecked Sendable {
     private let router: AppRouter

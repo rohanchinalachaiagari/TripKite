@@ -2,7 +2,7 @@ import SwiftUI
 import UserNotifications
 
 @main
-struct TripKitApp: App {
+struct TripKiteApp: App {
     private let tripRepository: TripRepository
     private let itineraryRepository: ItineraryRepository
     private let notificationService: NotificationSchedulingService

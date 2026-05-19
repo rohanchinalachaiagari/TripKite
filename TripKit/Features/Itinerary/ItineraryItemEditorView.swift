@@ -62,7 +62,7 @@ struct ItineraryItemEditorView: View {
                     }
                 }
                 if viewModel.authorizationStatus == .denied && viewModel.reminderOption != .none {
-                    Text("Notifications are turned off for TripKit. Enable them in Settings to receive reminders.")
+                    Text("Notifications are turned off for TripKite. Enable them in Settings to receive reminders.")
                         .font(TKTypography.metadata)
                         .foregroundStyle(TKColors.textSecondary)
                 }
