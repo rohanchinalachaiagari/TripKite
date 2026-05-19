@@ -10,24 +10,21 @@ TripKit keeps trips, itinerary items, travel documents, and reminders in one pla
 
 ## Overview
 
-TripKit is a small, focused iOS app for organizing personal travel. Users can create trips, add itinerary items (flights, hotels, activities, restaurants, transportation, notes), attach local documents, and schedule local reminders for upcoming events. All data is stored on-device using Core Data and the app sandbox.
+TripKit is a focused iOS app for organizing personal travel. Users can create trips, add itinerary items (flights, hotels, activities, restaurants, transportation, notes), attach local documents, and schedule local reminders for upcoming events. All data is stored on-device using Core Data and the app sandbox.
 
-The project's goal is to demonstrate production-style iOS engineering in a small surface area: clean architecture, protocol-based dependency injection, local persistence, testable view models, and thoughtful offline-first behavior.
+The project is a small surface area built with production-style engineering: clean architecture, protocol-based dependency injection, local persistence, testable view models, and offline-first behavior.
 
 ![Trip Detail](Screenshots/trip-detail.png)
 
 ---
 
-## Why I Built It
+## Motivation
 
-I wanted a portfolio project that looked like real product code rather than a tutorial walkthrough. The constraints I set for myself:
+Travel apps are a natural fit for offline-first design: connectivity is unpredictable exactly when an itinerary matters most. TripKit was built as a portfolio project that holds itself to the same constraints a real product would:
 
-- Pick a domain where offline reliability genuinely matters — travel is a great fit because connectivity is unpredictable when you actually need your itinerary.
-- Use only Apple-native frameworks. No third-party packages, no Firebase, no networking.
-- Build the architecture as if the app might one day need cloud sync, without actually building cloud sync.
-- Make the codebase readable in a single afternoon by someone who has never seen it before.
-
-The result is a deliberately small app with the kind of seams and tests I'd want in production.
+- Apple-native frameworks only — no third-party packages, no networking, no backend.
+- Architecture shaped so cloud sync could be added later without a rewrite.
+- A codebase small enough to read in a single sitting and complete enough to ship.
 
 ---
 
@@ -37,7 +34,7 @@ The result is a deliberately small app with the kind of seams and tests I'd want
 - Add itinerary items with type, time, location, confirmation number, and notes
 - Chronological timeline grouped by day
 - "Happening Now" and "Up Next" focus card on the trip detail screen
-- Local reminders at preset offsets before an item (5 min / 15 min / 30 min / 1 hour / 1 day / at start time)
+- Local reminders at preset offsets (5 min / 15 min / 30 min / 1 hour / 1 day / at start time)
 - Foreground and background notification delivery
 - Notification tap routes directly into the trip and item
 - Attach PDFs, images, and screenshots to a trip
@@ -57,7 +54,7 @@ The result is a deliberately small app with the kind of seams and tests I'd want
 - **Background Core Data contexts.** Every repository call runs on a fresh background context, so the main thread never blocks on disk I/O.
 - **File / Core Data split for attachments.** File bytes live in the app sandbox; only metadata lives in Core Data, with a rollback path if the metadata write fails after the file copy.
 - **Deterministic view models.** `@Sendable () -> Date` injection lets tests pin "now" and verify focus-card, status, and reminder behavior without flakiness.
-- **Two-step notification delegate.** A small `NotificationResponseHandler` bridges the `UNUserNotificationCenter` delegate callback (called on an arbitrary queue) to a `@MainActor`-isolated `AppRouter`.
+- **MainActor bridging for notifications.** A `NotificationResponseHandler` bridges the `UNUserNotificationCenter` delegate callback (called on an arbitrary queue) to a `@MainActor`-isolated `AppRouter`.
 
 ---
 
@@ -207,7 +204,7 @@ This keeps deep linking in the navigation layer — no router coupling pushed in
 
 ## Testing Strategy
 
-The test suite covers business logic, repository round-trips, and view-model behavior. Roughly 20 test files exercise:
+The test suite covers business logic, repository round-trips, and view-model behavior. The suite exercises:
 
 - **View models** — `TripListViewModel`, `TripDetailViewModel`, `TripEditorViewModel`, `ItineraryItemEditorViewModel`, `DocumentListViewModel` (load, save, delete, validation, focus, error paths, reminder scheduling, outside-range confirmation, rename, item association).
 - **Repositories** — `CoreDataTripRepository`, `CoreDataItineraryRepository`, `CoreDataDocumentRepository` using in-memory stacks (CRUD, sort order, foreign-key errors, cascade and nullify rules).
@@ -224,24 +221,22 @@ Patterns used:
 
 ## Known Limitations
 
-Honest list of what V1 doesn't do:
-
 - **No cloud sync.** Trips and documents are device-local. Reinstalling or switching devices loses data unless restored from an iCloud device backup.
-- **No timezone awareness for reminders.** Reminder fire times are absolute offsets from the item's stored `Date`. If the user changes timezones between scheduling and delivery, the fire moment doesn't shift to the destination's local time.
+- **No timezone awareness for reminders.** Reminder fire times are absolute offsets from the item's stored `Date`. Changing timezones between scheduling and delivery does not shift the fire moment to the destination's local time.
 - **No Core Data model migration scaffolding.** The schema is at version 1. The first schema change post-ship will require adding a model version and lightweight migration setup.
 - **No orphan file sweeper.** If the app is force-killed between a file copy and the metadata write, an orphan file may be left in the sandbox. In-process error paths roll back correctly.
 - **No search or filtering.** The trip list shows Upcoming and Past sections; itinerary items are timeline-sorted only.
 - **No widget, no settings screen.**
-- **Reminders persist a `reminderOffset` even if the user has denied notifications.** An inline hint surfaces in the editor, but a denied state is not flagged on the trip detail or item row.
+- **Reminders persist a `reminderOffset` even if the user has denied notifications.** An inline hint surfaces in the editor, but the denied state is not flagged on the trip detail or item row.
 
 ---
 
 ## Future Roadmap
 
-These are out of scope for V1 and explicitly not yet implemented:
+Out of scope for V1 and explicitly not yet implemented:
 
 - Cloud sync via CloudKit (the repository layer is shaped to make this additive rather than a rewrite).
-- A TestFlight beta build for friends and family.
+- A TestFlight beta build.
 - Per-itinerary destination timezone support for reminders.
 - Reservation / screenshot OCR import.
 - Real-time collaboration on a shared trip.
@@ -271,7 +266,7 @@ open TripKit.xcodeproj
 In Xcode:
 
 1. Select the `TripKit` scheme.
-2. Choose an iPhone simulator (or a real device for notification testing — banners do not render in the simulator until you trigger them manually).
+2. Choose an iPhone simulator (or a real device for notification testing — banners do not render in the simulator until triggered manually).
 3. Press **⌘R** to run.
 4. Press **⌘U** to run the test suite.
 
@@ -279,35 +274,22 @@ No package resolution or signing setup is required for simulator builds.
 
 ---
 
-## Manual QA Checklist
+## Quality Checks
 
-A short script for verifying the happy paths before tagging a build:
+Run the XCTest suite with **⌘U** before tagging a build. The suite covers the persistence layer, view models, validators, and the notification route parser.
 
-- [ ] Create a trip, add an itinerary item, confirm it appears in the timeline grouped under the correct day.
-- [ ] Edit the trip's title and confirm the change propagates to the trip detail header and list row.
-- [ ] Delete an itinerary item via swipe; confirm the row disappears and any reminder for it is cancelled.
-- [ ] Add an item with start date outside the trip's range; confirm the "Outside trip dates" confirmation appears and respects Cancel / Save Anyway.
-- [ ] Add an item with a 1-minute reminder; lock the device; confirm the banner fires and tapping it opens the item's editor.
-- [ ] Schedule a reminder a minute out and leave the app foregrounded; confirm a banner and sound appear.
-- [ ] Attach a PDF via Files; verify the row shows file name, size, and type, and that tap opens QuickLook.
-- [ ] Attach a screenshot via Photos; verify the row title starts with `Screenshot-` or `Photo-`.
-- [ ] Rename a document with and without a matching extension suffix; verify the trailing `.png` / `.pdf` is stripped from the display name.
-- [ ] Assign a document to an itinerary item via the context menu; confirm a paperclip icon appears on the item's timeline row.
-- [ ] Open that item's editor and confirm the associated document is listed in the Documents section.
-- [ ] Delete a trip with attached documents; confirm both records and files are removed.
-- [ ] Attempt to import a file larger than 25 MB; confirm a "too large" alert appears and nothing is copied.
+For manual verification, walk through the trip creation, reminder firing (both lock-screen and foreground), and document attachment flows on a real device. A more detailed checklist lives in [`docs/QA.md`](docs/QA.md).
 
 ---
 
-## Interview Talking Points
+## Engineering Decisions
 
-Things I'd highlight in a deep-dive conversation:
+A few design choices worth calling out:
 
-- **Offline-first by construction.** Everything is local on the device. There's no syncing layer to hide behind; correctness has to come from the local model.
-- **Protocol-based dependency injection** without a DI framework. The graph is constructed in `TripKitApp.init` and threaded down. Repositories and services all conform to `Sendable` protocols that mocks satisfy directly.
-- **Concurrency model.** View models are `@MainActor`. Repositories are `nonisolated` and create a fresh background `NSManagedObjectContext` per call. `NotificationResponseHandler` is `@unchecked Sendable` and hops to the MainActor before mutating `AppRouter`.
-- **File / metadata coordination.** The two-write (file copy then Core Data save) sequence and its rollback path. The 25 MB cap. The decision to keep file bytes out of Core Data.
-- **Notification identifier design.** `trip-<tripId>-item-<itemId>` lets a single string identifier serve both "cancel one reminder" and "cancel all reminders for a deleted trip."
-- **Deep-link routing.** A small `AppRouter` + `TripDestination` value type carry intent from a notification tap into the navigation stack without coupling the detail view to the router.
-- **Testability tradeoffs.** Repository tests use real in-memory Core Data because mocking Core Data itself buys you nothing; view-model tests use actor-isolated mocks because they need to assert call counts and inject failures.
-- **Honest about limits.** No cloud sync, no timezones, no migrations yet. V1 was scoped down deliberately so the architecture would have room to add those without a rewrite.
+- **Pure-Swift domain models with a mapping boundary.** `NSManagedObject` subclasses never leak out of the persistence layer. View models and tests work exclusively with `Sendable` value types, which keeps the test suite fast and the rest of the codebase decoupled from Core Data.
+- **A fresh background context per repository call.** Reads and writes never block the main thread, and each call is its own transactional boundary. Repository tests use real in-memory Core Data stacks rather than mocking Core Data itself — Core Data's behavior is too load-bearing to mock cheaply.
+- **Files outside Core Data, metadata inside.** Document bytes live in the app sandbox under a UUID filename; only metadata is persisted. The two-write sequence has an explicit rollback so a failed metadata write doesn't leave orphan files on disk.
+- **Protocol-based dependency injection without a framework.** The graph is built once in `TripKitApp.init` and threaded down through view initializers. Each system capability (notifications, document storage) sits behind a `Sendable` protocol that mocks satisfy directly.
+- **Single notification identifier scheme.** `trip-<tripId>-item-<itemId>` lets the scheduling service cancel a single reminder by item id or every reminder for a trip on deletion using a single substring match — no separate index needed.
+- **Deep-link routing as a navigation value.** Notification taps produce a `PendingTripRoute`, which becomes a `TripDestination { trip, focusItemId }` pushed onto the navigation stack. The detail view consumes `focusItemId` once after items load. Routing intent lives in the navigation layer rather than as state shared between the router and the detail screen.
+- **Deferred Core Data migration scaffolding.** The schema is intentionally at version 1. Migration setup is straightforward to add when the first schema change is needed; adding it preemptively would be premature complexity.
