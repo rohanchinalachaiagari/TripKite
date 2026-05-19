@@ -2,7 +2,7 @@
 
 **An offline-first iOS travel companion built in SwiftUI.**
 
-TripKit keeps trips, itinerary items, travel documents, and reminders in one place — and works without a network connection.
+TripKit keeps trips, itinerary items, travel documents, and reminders in one place. It all works without a network connection.
 
 ![Trip List](Screenshots/trip-list.png)
 
