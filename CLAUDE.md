@@ -6,8 +6,6 @@ This file provides guidance to Claude Code when working in this repository.
 
 TripKite is an offline-first iOS travel companion app built with SwiftUI. Users can create trips, add itinerary items, attach travel documents, schedule reminders, and view their trip timeline without requiring network access.
 
-(The on-disk Xcode project, scheme, and Swift module are still named `TripKit` for historical reasons. The product ships as **TripKite**.)
-
 The goal of this project is to demonstrate production-style iOS engineering: clean architecture, local persistence, dependency injection, testability, offline-first design, and thoughtful mobile-specific behavior.
 
 ---
@@ -135,7 +133,7 @@ Views should not directly access Core Data, FileManager, UserNotifications, or o
 ## Suggested Folder Structure
 
 ```text
-TripKit/
+TripKite/
   App/
     TripKiteApp.swift
     AppRouter.swift
@@ -199,7 +197,7 @@ TripKit/
       ReminderViewModel.swift
 
   Tests/
-    TripKitTests/
+    TripKiteTests/
       TripListViewModelTests.swift
       TripDetailViewModelTests.swift
       ItinerarySortingTests.swift
@@ -578,7 +576,7 @@ Common tasks:
 
 ```text
 Open project:
-- Open TripKit.xcodeproj or TripKit.xcworkspace in Xcode
+- Open TripKite.xcodeproj or TripKite.xcworkspace in Xcode
 
 Run app:
 - Select an iPhone simulator

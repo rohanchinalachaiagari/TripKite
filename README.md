@@ -260,17 +260,17 @@ Out of scope for V1 and explicitly not yet implemented:
 ```bash
 git clone https://github.com/<your-username>/TripKite.git
 cd TripKite
-open TripKit.xcodeproj
+open TripKite.xcodeproj
 ```
 
 In Xcode:
 
-1. Select the `TripKit` scheme.
+1. Select the `TripKite` scheme.
 2. Choose an iPhone simulator (or a real device for notification testing — banners do not render in the simulator until triggered manually).
 3. Press **⌘R** to run.
 4. Press **⌘U** to run the test suite.
 
-No package resolution or signing setup is required for simulator builds. The product builds and ships as **TripKite**; the underlying Xcode project, scheme, and module are still named `TripKit` for historical reasons.
+No package resolution or signing setup is required for simulator builds.
 
 ---
 
