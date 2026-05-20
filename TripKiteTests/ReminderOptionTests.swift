@@ -29,4 +29,22 @@ final class ReminderOptionTests: XCTestCase {
     func testMatch_NonPresetFallsBackToNone() {
         XCTAssertEqual(ReminderOption.match(offset: 17 * 60), .none)
     }
+
+    // Raw values are persisted by SettingsStore — pinning them here so a
+    // future case rename can't silently invalidate stored user defaults.
+    func testRawValues_AreStable() {
+        XCTAssertEqual(ReminderOption.none.rawValue, "none")
+        XCTAssertEqual(ReminderOption.atStart.rawValue, "atStart")
+        XCTAssertEqual(ReminderOption.minutesBefore5.rawValue, "5min")
+        XCTAssertEqual(ReminderOption.minutesBefore15.rawValue, "15min")
+        XCTAssertEqual(ReminderOption.minutesBefore30.rawValue, "30min")
+        XCTAssertEqual(ReminderOption.hourBefore1.rawValue, "1hour")
+        XCTAssertEqual(ReminderOption.dayBefore1.rawValue, "1day")
+    }
+
+    func testRawValue_RoundTripsAllCases() {
+        for option in ReminderOption.allCases {
+            XCTAssertEqual(ReminderOption(rawValue: option.rawValue), option)
+        }
+    }
 }

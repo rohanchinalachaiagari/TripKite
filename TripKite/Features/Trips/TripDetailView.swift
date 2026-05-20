@@ -11,6 +11,7 @@ struct TripDetailView: View {
     private let notificationService: NotificationSchedulingService
     private let documentRepository: DocumentRepository
     private let documentStorage: DocumentStorageService
+    private let settingsStore: SettingsStore
     private let onChange: () -> Void
 
     @State private var isEditingTrip = false
@@ -30,6 +31,7 @@ struct TripDetailView: View {
         notificationService: NotificationSchedulingService,
         documentRepository: DocumentRepository,
         documentStorage: DocumentStorageService,
+        settingsStore: SettingsStore,
         onChange: @escaping () -> Void
     ) {
         self.focusItemId = focusItemId
@@ -38,6 +40,7 @@ struct TripDetailView: View {
         self.notificationService = notificationService
         self.documentRepository = documentRepository
         self.documentStorage = documentStorage
+        self.settingsStore = settingsStore
         self.onChange = onChange
         _viewModel = StateObject(
             wrappedValue: TripDetailViewModel(
@@ -162,6 +165,7 @@ struct TripDetailView: View {
                     repository: itineraryRepository,
                     notificationService: notificationService,
                     tripRange: viewModel.trip.startDate...viewModel.trip.endDate,
+                    defaultReminderOption: settingsStore.defaultReminderOption(),
                     onSaved: {
                         Task { await viewModel.load() }
                     }
@@ -346,6 +350,7 @@ private struct FocusCard: View {
             notificationService: UserNotificationSchedulingService(),
             documentRepository: CoreDataDocumentRepository(stack: stack),
             documentStorage: FileManagerDocumentStorageService(),
+            settingsStore: UserDefaultsSettingsStore(defaults: UserDefaults(suiteName: "TripKite-Preview")!),
             onChange: {}
         )
     }

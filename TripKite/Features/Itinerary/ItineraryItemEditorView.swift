@@ -14,6 +14,7 @@ struct ItineraryItemEditorView: View {
         repository: ItineraryRepository,
         notificationService: NotificationSchedulingService,
         tripRange: ClosedRange<Date>? = nil,
+        defaultReminderOption: ReminderOption = .none,
         associatedDocuments: [TravelDocument] = [],
         resolveDocumentURL: ((TravelDocument) -> URL?)? = nil,
         onSaved: @escaping () -> Void
@@ -23,7 +24,8 @@ struct ItineraryItemEditorView: View {
                 mode: mode,
                 repository: repository,
                 notificationService: notificationService,
-                tripRange: tripRange
+                tripRange: tripRange,
+                defaultReminderOption: defaultReminderOption
             )
         )
         self.associatedDocuments = associatedDocuments

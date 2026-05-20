@@ -47,6 +47,7 @@ final class ItineraryItemEditorViewModel: ObservableObject {
         repository: ItineraryRepository,
         notificationService: NotificationSchedulingService,
         tripRange: ClosedRange<Date>? = nil,
+        defaultReminderOption: ReminderOption = .none,
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.mode = mode
@@ -67,7 +68,10 @@ final class ItineraryItemEditorViewModel: ObservableObject {
             self.address = ""
             self.confirmationNumber = ""
             self.notes = ""
-            self.reminderOption = .none
+            // Use the user's persisted default. didSet does not fire from init,
+            // so the lazy-authorization Task isn't spawned here — the editor's
+            // existing flow handles it if/when the user changes the picker.
+            self.reminderOption = defaultReminderOption
         case .edit(let item):
             self.tripId = item.tripId
             self.title = item.title

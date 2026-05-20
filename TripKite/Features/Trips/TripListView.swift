@@ -8,6 +8,7 @@ struct TripListView: View {
     private let notificationService: NotificationSchedulingService
     private let documentRepository: DocumentRepository
     private let documentStorage: DocumentStorageService
+    private let settingsStore: SettingsStore
 
     @State private var navigationPath = NavigationPath()
     @State private var isCreating = false
@@ -18,6 +19,7 @@ struct TripListView: View {
         notificationService: NotificationSchedulingService,
         documentRepository: DocumentRepository,
         documentStorage: DocumentStorageService,
+        settingsStore: SettingsStore,
         appRouter: AppRouter
     ) {
         self.tripRepository = tripRepository
@@ -25,6 +27,7 @@ struct TripListView: View {
         self.notificationService = notificationService
         self.documentRepository = documentRepository
         self.documentStorage = documentStorage
+        self.settingsStore = settingsStore
         self.appRouter = appRouter
         _viewModel = StateObject(
             wrappedValue: TripListViewModel(
@@ -53,6 +56,7 @@ struct TripListView: View {
                     notificationService: notificationService,
                     documentRepository: documentRepository,
                     documentStorage: documentStorage,
+                    settingsStore: settingsStore,
                     onChange: { Task { await viewModel.load() } }
                 )
             }
@@ -254,6 +258,7 @@ private struct TripRow: View {
         notificationService: UserNotificationSchedulingService(),
         documentRepository: CoreDataDocumentRepository(stack: stack),
         documentStorage: FileManagerDocumentStorageService(),
+        settingsStore: UserDefaultsSettingsStore(defaults: UserDefaults(suiteName: "TripKite-Preview")!),
         appRouter: AppRouter()
     )
 }
@@ -266,6 +271,7 @@ private struct TripRow: View {
         notificationService: UserNotificationSchedulingService(),
         documentRepository: CoreDataDocumentRepository(stack: stack),
         documentStorage: FileManagerDocumentStorageService(),
+        settingsStore: UserDefaultsSettingsStore(defaults: UserDefaults(suiteName: "TripKite-Preview")!),
         appRouter: AppRouter()
     )
 }

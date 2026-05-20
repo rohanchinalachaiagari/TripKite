@@ -19,6 +19,8 @@ struct RootTabView: View {
     private let notificationService: NotificationSchedulingService
     private let documentRepository: DocumentRepository
     private let documentStorage: DocumentStorageService
+    private let settingsStore: SettingsStore
+    private let dataManagement: DataManagementService
 
     @State private var selectedTab: Tab = .trips
 
@@ -35,6 +37,8 @@ struct RootTabView: View {
         notificationService: NotificationSchedulingService,
         documentRepository: DocumentRepository,
         documentStorage: DocumentStorageService,
+        settingsStore: SettingsStore,
+        dataManagement: DataManagementService,
         appRouter: AppRouter
     ) {
         self.tripRepository = tripRepository
@@ -42,6 +46,8 @@ struct RootTabView: View {
         self.notificationService = notificationService
         self.documentRepository = documentRepository
         self.documentStorage = documentStorage
+        self.settingsStore = settingsStore
+        self.dataManagement = dataManagement
         self.appRouter = appRouter
     }
 
@@ -53,6 +59,7 @@ struct RootTabView: View {
                 notificationService: notificationService,
                 documentRepository: documentRepository,
                 documentStorage: documentStorage,
+                settingsStore: settingsStore,
                 appRouter: appRouter
             )
             .tabItem {
@@ -72,11 +79,15 @@ struct RootTabView: View {
                 }
                 .tag(Tab.documents)
 
-            SettingsPlaceholderView()
-                .tabItem {
-                    Label("Settings", systemImage: "gearshape.fill")
-                }
-                .tag(Tab.settings)
+            SettingsView(
+                settingsStore: settingsStore,
+                dataManagement: dataManagement,
+                notificationService: notificationService
+            )
+            .tabItem {
+                Label("Settings", systemImage: "gearshape.fill")
+            }
+            .tag(Tab.settings)
         }
         .onChange(of: appRouter.pendingTripDetail) { _, newRoute in
             // Force the Trips tab into view when a notification deep-link
@@ -90,26 +101,49 @@ struct RootTabView: View {
 }
 
 #if DEBUG
+private func previewDependencies(stack: CoreDataStack) -> (
+    SettingsStore,
+    DataManagementService,
+    NotificationSchedulingService
+) {
+    let settings = UserDefaultsSettingsStore(defaults: UserDefaults(suiteName: "TripKite-Preview")!)
+    let notifications = UserNotificationSchedulingService()
+    let data = LocalDataManagementService(
+        tripRepository: CoreDataTripRepository(stack: stack),
+        documentRepository: CoreDataDocumentRepository(stack: stack),
+        documentStorage: FileManagerDocumentStorageService(),
+        notificationService: notifications,
+        settingsStore: settings
+    )
+    return (settings, data, notifications)
+}
+
 #Preview("Seeded") {
     let stack = CoreDataStack.previewSeeded()
+    let (settings, data, notifications) = previewDependencies(stack: stack)
     RootTabView(
         tripRepository: CoreDataTripRepository(stack: stack),
         itineraryRepository: CoreDataItineraryRepository(stack: stack),
-        notificationService: UserNotificationSchedulingService(),
+        notificationService: notifications,
         documentRepository: CoreDataDocumentRepository(stack: stack),
         documentStorage: FileManagerDocumentStorageService(),
+        settingsStore: settings,
+        dataManagement: data,
         appRouter: AppRouter()
     )
 }
 
 #Preview("Empty") {
     let stack = CoreDataStack(inMemory: true)
+    let (settings, data, notifications) = previewDependencies(stack: stack)
     RootTabView(
         tripRepository: CoreDataTripRepository(stack: stack),
         itineraryRepository: CoreDataItineraryRepository(stack: stack),
-        notificationService: UserNotificationSchedulingService(),
+        notificationService: notifications,
         documentRepository: CoreDataDocumentRepository(stack: stack),
         documentStorage: FileManagerDocumentStorageService(),
+        settingsStore: settings,
+        dataManagement: data,
         appRouter: AppRouter()
     )
 }

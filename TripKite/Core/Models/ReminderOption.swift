@@ -1,13 +1,15 @@
 import Foundation
 
-enum ReminderOption: CaseIterable, Identifiable, Hashable {
-    case none
-    case atStart
-    case minutesBefore5
-    case minutesBefore15
-    case minutesBefore30
-    case hourBefore1
-    case dayBefore1
+// Raw values are explicit (not auto-derived from the case names) so they can
+// be persisted by SettingsStore and survive any future case renames.
+enum ReminderOption: String, CaseIterable, Identifiable, Hashable {
+    case none = "none"
+    case atStart = "atStart"
+    case minutesBefore5 = "5min"
+    case minutesBefore15 = "15min"
+    case minutesBefore30 = "30min"
+    case hourBefore1 = "1hour"
+    case dayBefore1 = "1day"
 
     var id: Self { self }
 

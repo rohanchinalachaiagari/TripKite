@@ -8,17 +8,34 @@ struct TripKiteApp: App {
     private let notificationService: NotificationSchedulingService
     private let documentRepository: DocumentRepository
     private let documentStorage: DocumentStorageService
+    private let settingsStore: SettingsStore
+    private let dataManagement: DataManagementService
     private let notificationHandler: NotificationResponseHandler
 
     @StateObject private var appRouter: AppRouter
 
     init() {
         let stack = CoreDataStack()
-        self.tripRepository = CoreDataTripRepository(stack: stack)
-        self.itineraryRepository = CoreDataItineraryRepository(stack: stack)
-        self.notificationService = UserNotificationSchedulingService()
-        self.documentRepository = CoreDataDocumentRepository(stack: stack)
-        self.documentStorage = FileManagerDocumentStorageService()
+        let tripRepo = CoreDataTripRepository(stack: stack)
+        let itineraryRepo = CoreDataItineraryRepository(stack: stack)
+        let documentRepo = CoreDataDocumentRepository(stack: stack)
+        let docStorage = FileManagerDocumentStorageService()
+        let notifications = UserNotificationSchedulingService()
+        let settings = UserDefaultsSettingsStore()
+
+        self.tripRepository = tripRepo
+        self.itineraryRepository = itineraryRepo
+        self.notificationService = notifications
+        self.documentRepository = documentRepo
+        self.documentStorage = docStorage
+        self.settingsStore = settings
+        self.dataManagement = LocalDataManagementService(
+            tripRepository: tripRepo,
+            documentRepository: documentRepo,
+            documentStorage: docStorage,
+            notificationService: notifications,
+            settingsStore: settings
+        )
 
         let router = AppRouter()
         let handler = NotificationResponseHandler(router: router)
@@ -35,6 +52,8 @@ struct TripKiteApp: App {
                 notificationService: notificationService,
                 documentRepository: documentRepository,
                 documentStorage: documentStorage,
+                settingsStore: settingsStore,
+                dataManagement: dataManagement,
                 appRouter: appRouter
             )
         }
