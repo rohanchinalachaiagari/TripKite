@@ -73,11 +73,16 @@ struct RootTabView: View {
                 }
                 .tag(Tab.search)
 
-            DocumentVaultPlaceholderView()
-                .tabItem {
-                    Label("Documents", systemImage: "doc.on.doc.fill")
-                }
-                .tag(Tab.documents)
+            DocumentVaultView(
+                documentRepository: documentRepository,
+                tripRepository: tripRepository,
+                itineraryRepository: itineraryRepository,
+                documentStorage: documentStorage
+            )
+            .tabItem {
+                Label("Documents", systemImage: "doc.on.doc.fill")
+            }
+            .tag(Tab.documents)
 
             SettingsView(
                 settingsStore: settingsStore,

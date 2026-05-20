@@ -3,6 +3,10 @@ import Foundation
 protocol DocumentRepository: Sendable {
     func fetchDocuments(for tripId: UUID) async throws -> [TravelDocument]
     func fetchDocuments(forItemId itemId: UUID) async throws -> [TravelDocument]
+    // Every document across every trip, sorted createdAt descending. Used by
+    // the global Documents tab so the user can browse and add documents
+    // without first navigating into a trip.
+    func fetchAllDocuments() async throws -> [TravelDocument]
     func document(with id: UUID) async throws -> TravelDocument?
     func createDocument(_ document: TravelDocument) async throws
     func updateDocument(_ document: TravelDocument) async throws

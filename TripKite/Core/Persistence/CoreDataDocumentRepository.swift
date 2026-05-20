@@ -28,6 +28,15 @@ nonisolated final class CoreDataDocumentRepository: DocumentRepository, @uncheck
         }
     }
 
+    func fetchAllDocuments() async throws -> [TravelDocument] {
+        let context = stack.newBackgroundContext()
+        return try await context.perform {
+            let request = NSFetchRequest<TravelDocumentEntity>(entityName: "TravelDocumentEntity")
+            request.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]
+            return try context.fetch(request).map { $0.toDomain() }
+        }
+    }
+
     func document(with id: UUID) async throws -> TravelDocument? {
         let context = stack.newBackgroundContext()
         return try await context.perform {

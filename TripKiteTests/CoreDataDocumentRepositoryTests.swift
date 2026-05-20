@@ -52,6 +52,37 @@ final class CoreDataDocumentRepositoryTests: XCTestCase {
         XCTAssertEqual(docs.map(\.fileName), ["Early", "Late"])
     }
 
+    // MARK: - Fetch all
+
+    func testFetchAllDocuments_WhenEmpty_ReturnsEmpty() async throws {
+        let docs = try await repository.fetchAllDocuments()
+        XCTAssertTrue(docs.isEmpty)
+    }
+
+    func testFetchAllDocuments_ReturnsDocumentsAcrossEveryTrip() async throws {
+        let mine = makeDocument(name: "Mine", tripId: trip.id, createdAt: Date(timeIntervalSince1970: 100))
+        let theirs = makeDocument(name: "Theirs", tripId: otherTrip.id, createdAt: Date(timeIntervalSince1970: 200))
+        try await repository.createDocument(mine)
+        try await repository.createDocument(theirs)
+
+        let docs = try await repository.fetchAllDocuments()
+
+        XCTAssertEqual(Set(docs.map(\.fileName)), Set(["Mine", "Theirs"]))
+    }
+
+    func testFetchAllDocuments_SortsByCreatedAtDescending() async throws {
+        let middle = makeDocument(name: "Middle", tripId: trip.id, createdAt: Date(timeIntervalSince1970: 200))
+        let earliest = makeDocument(name: "Earliest", tripId: otherTrip.id, createdAt: Date(timeIntervalSince1970: 100))
+        let latest = makeDocument(name: "Latest", tripId: trip.id, createdAt: Date(timeIntervalSince1970: 300))
+        try await repository.createDocument(middle)
+        try await repository.createDocument(earliest)
+        try await repository.createDocument(latest)
+
+        let docs = try await repository.fetchAllDocuments()
+
+        XCTAssertEqual(docs.map(\.fileName), ["Latest", "Middle", "Earliest"])
+    }
+
     // MARK: - Create
 
     func testCreateDocument_AttachesToCorrectTrip() async throws {

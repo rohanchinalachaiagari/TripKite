@@ -12,6 +12,7 @@ struct TripListView: View {
 
     @State private var navigationPath = NavigationPath()
     @State private var isCreating = false
+    @State private var tripPendingDeletion: Trip?
 
     init(
         tripRepository: TripRepository,
@@ -102,6 +103,22 @@ struct TripListView: View {
             } message: { message in
                 Text(message)
             }
+            .alert(
+                "Delete Trip?",
+                isPresented: Binding(
+                    get: { tripPendingDeletion != nil },
+                    set: { if !$0 { tripPendingDeletion = nil } }
+                )
+            ) {
+                Button("Delete Trip", role: .destructive) {
+                    if let trip = tripPendingDeletion {
+                        Task { await viewModel.delete(trip) }
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will permanently delete the trip, itinerary items, reminders, and attached documents. This cannot be undone.")
+            }
         }
     }
 
@@ -133,11 +150,12 @@ struct TripListView: View {
                         }
                     }
                     .onDelete { indexSet in
-                        let toDelete = indexSet.map { viewModel.upcomingTrips[$0] }
-                        Task {
-                            for trip in toDelete {
-                                await viewModel.delete(trip)
-                            }
+                        // Swipe-to-delete fires one index in practice; stage
+                        // the trip for confirmation rather than deleting it
+                        // immediately so the user has a chance to back out
+                        // before the cascade runs.
+                        if let first = indexSet.first {
+                            tripPendingDeletion = viewModel.upcomingTrips[first]
                         }
                     }
                 } header: {
@@ -153,11 +171,8 @@ struct TripListView: View {
                         }
                     }
                     .onDelete { indexSet in
-                        let toDelete = indexSet.map { viewModel.pastTrips[$0] }
-                        Task {
-                            for trip in toDelete {
-                                await viewModel.delete(trip)
-                            }
+                        if let first = indexSet.first {
+                            tripPendingDeletion = viewModel.pastTrips[first]
                         }
                     }
                 } header: {

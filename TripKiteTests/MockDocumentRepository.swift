@@ -8,6 +8,7 @@ final actor MockDocumentRepository: DocumentRepository {
 
     private(set) var fetchTripCount = 0
     private(set) var fetchItemCount = 0
+    private(set) var fetchAllCount = 0
     private(set) var createCallCount = 0
     private(set) var updateCallCount = 0
     private(set) var deleteCallCount = 0
@@ -52,6 +53,12 @@ final actor MockDocumentRepository: DocumentRepository {
         return storage.values
             .filter { $0.itineraryItemId == itemId }
             .sorted { $0.createdAt < $1.createdAt }
+    }
+
+    func fetchAllDocuments() async throws -> [TravelDocument] {
+        fetchAllCount += 1
+        if let fetchError { throw fetchError }
+        return storage.values.sorted { $0.createdAt > $1.createdAt }
     }
 
     func document(with id: UUID) async throws -> TravelDocument? {
