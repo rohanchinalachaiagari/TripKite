@@ -29,7 +29,7 @@ struct TripKiteApp: App {
 
     var body: some Scene {
         WindowGroup {
-            TripListView(
+            RootTabView(
                 tripRepository: tripRepository,
                 itineraryRepository: itineraryRepository,
                 notificationService: notificationService,
