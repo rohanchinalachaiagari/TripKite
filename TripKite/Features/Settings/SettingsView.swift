@@ -38,10 +38,9 @@ struct SettingsView: View {
                     Task { await viewModel.refreshAuthorizationStatus() }
                 }
             }
-            .confirmationDialog(
+            .alert(
                 "Delete all TripKite data?",
-                isPresented: $viewModel.pendingClearConfirmation,
-                titleVisibility: .visible
+                isPresented: $viewModel.pendingClearConfirmation
             ) {
                 Button("Delete Everything", role: .destructive) {
                     Task { await viewModel.confirmClearAllData() }
