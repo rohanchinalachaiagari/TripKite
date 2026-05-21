@@ -19,6 +19,15 @@ nonisolated final class CoreDataItineraryRepository: ItineraryRepository, @unche
         }
     }
 
+    func fetchAllItems() async throws -> [ItineraryItem] {
+        let context = stack.newBackgroundContext()
+        return try await context.perform {
+            let request = NSFetchRequest<ItineraryItemEntity>(entityName: "ItineraryItemEntity")
+            request.sortDescriptors = [NSSortDescriptor(key: "startDate", ascending: true)]
+            return try context.fetch(request).map { $0.toDomain() }
+        }
+    }
+
     func item(with id: UUID) async throws -> ItineraryItem? {
         let context = stack.newBackgroundContext()
         return try await context.perform {

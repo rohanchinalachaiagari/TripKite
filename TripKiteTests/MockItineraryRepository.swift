@@ -39,6 +39,12 @@ final actor MockItineraryRepository: ItineraryRepository {
             .sorted { $0.startDate < $1.startDate }
     }
 
+    func fetchAllItems() async throws -> [ItineraryItem] {
+        fetchCallCount += 1
+        if let fetchError { throw fetchError }
+        return storage.values.sorted { $0.startDate < $1.startDate }
+    }
+
     func item(with id: UUID) async throws -> ItineraryItem? {
         storage[id]
     }

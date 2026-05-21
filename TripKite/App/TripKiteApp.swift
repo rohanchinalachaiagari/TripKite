@@ -10,6 +10,7 @@ struct TripKiteApp: App {
     private let documentStorage: DocumentStorageService
     private let settingsStore: SettingsStore
     private let dataManagement: DataManagementService
+    private let searchService: SearchService
     private let notificationHandler: NotificationResponseHandler
 
     @StateObject private var appRouter: AppRouter
@@ -36,6 +37,11 @@ struct TripKiteApp: App {
             notificationService: notifications,
             settingsStore: settings
         )
+        self.searchService = LocalSearchService(
+            tripRepository: tripRepo,
+            itineraryRepository: itineraryRepo,
+            documentRepository: documentRepo
+        )
 
         let router = AppRouter()
         let handler = NotificationResponseHandler(router: router)
@@ -54,6 +60,7 @@ struct TripKiteApp: App {
                 documentStorage: documentStorage,
                 settingsStore: settingsStore,
                 dataManagement: dataManagement,
+                searchService: searchService,
                 appRouter: appRouter
             )
         }

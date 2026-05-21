@@ -21,6 +21,7 @@ struct RootTabView: View {
     private let documentStorage: DocumentStorageService
     private let settingsStore: SettingsStore
     private let dataManagement: DataManagementService
+    private let searchService: SearchService
 
     @State private var selectedTab: Tab = .trips
 
@@ -39,6 +40,7 @@ struct RootTabView: View {
         documentStorage: DocumentStorageService,
         settingsStore: SettingsStore,
         dataManagement: DataManagementService,
+        searchService: SearchService,
         appRouter: AppRouter
     ) {
         self.tripRepository = tripRepository
@@ -48,6 +50,7 @@ struct RootTabView: View {
         self.documentStorage = documentStorage
         self.settingsStore = settingsStore
         self.dataManagement = dataManagement
+        self.searchService = searchService
         self.appRouter = appRouter
     }
 
@@ -67,11 +70,15 @@ struct RootTabView: View {
             }
             .tag(Tab.trips)
 
-            SearchPlaceholderView()
-                .tabItem {
-                    Label("Search", systemImage: "magnifyingglass")
-                }
-                .tag(Tab.search)
+            SearchView(
+                searchService: searchService,
+                router: appRouter,
+                documentStorage: documentStorage
+            )
+            .tabItem {
+                Label("Search", systemImage: "magnifyingglass")
+            }
+            .tag(Tab.search)
 
             DocumentVaultView(
                 documentRepository: documentRepository,
@@ -134,6 +141,11 @@ private func previewDependencies(stack: CoreDataStack) -> (
         documentStorage: FileManagerDocumentStorageService(),
         settingsStore: settings,
         dataManagement: data,
+        searchService: LocalSearchService(
+            tripRepository: CoreDataTripRepository(stack: stack),
+            itineraryRepository: CoreDataItineraryRepository(stack: stack),
+            documentRepository: CoreDataDocumentRepository(stack: stack)
+        ),
         appRouter: AppRouter()
     )
 }
@@ -149,6 +161,11 @@ private func previewDependencies(stack: CoreDataStack) -> (
         documentStorage: FileManagerDocumentStorageService(),
         settingsStore: settings,
         dataManagement: data,
+        searchService: LocalSearchService(
+            tripRepository: CoreDataTripRepository(stack: stack),
+            itineraryRepository: CoreDataItineraryRepository(stack: stack),
+            documentRepository: CoreDataDocumentRepository(stack: stack)
+        ),
         appRouter: AppRouter()
     )
 }
