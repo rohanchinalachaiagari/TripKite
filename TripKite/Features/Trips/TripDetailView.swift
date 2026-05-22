@@ -12,6 +12,7 @@ struct TripDetailView: View {
     private let documentRepository: DocumentRepository
     private let documentStorage: DocumentStorageService
     private let settingsStore: SettingsStore
+    private let locationActions: LocationActionService
     private let onChange: () -> Void
 
     @State private var isEditingTrip = false
@@ -32,6 +33,7 @@ struct TripDetailView: View {
         documentRepository: DocumentRepository,
         documentStorage: DocumentStorageService,
         settingsStore: SettingsStore,
+        locationActions: LocationActionService,
         onChange: @escaping () -> Void
     ) {
         self.focusItemId = focusItemId
@@ -41,13 +43,15 @@ struct TripDetailView: View {
         self.documentRepository = documentRepository
         self.documentStorage = documentStorage
         self.settingsStore = settingsStore
+        self.locationActions = locationActions
         self.onChange = onChange
         _viewModel = StateObject(
             wrappedValue: TripDetailViewModel(
                 trip: trip,
                 itineraryRepository: itineraryRepository,
                 tripRepository: tripRepository,
-                notificationService: notificationService
+                notificationService: notificationService,
+                locationActions: locationActions
             )
         )
         _documentsViewModel = StateObject(
@@ -104,7 +108,17 @@ struct TripDetailView: View {
                     onDelete: { item in
                         Task { await viewModel.deleteItem(item) }
                     },
-                    onAddItem: { isCreatingItem = true }
+                    onAddItem: { isCreatingItem = true },
+                    onLocationAction: { item, action in
+                        switch action {
+                        case .openInMaps:
+                            viewModel.openInMaps(for: item)
+                        case .copyAddress:
+                            viewModel.copyAddress(of: item)
+                        case .copyLocationName:
+                            viewModel.copyLocationName(of: item)
+                        }
+                    }
                 )
 
                 DocumentsSection(
@@ -164,6 +178,7 @@ struct TripDetailView: View {
                     ),
                     repository: itineraryRepository,
                     notificationService: notificationService,
+                    locationActions: locationActions,
                     tripRange: viewModel.trip.startDate...viewModel.trip.endDate,
                     defaultReminderOption: settingsStore.defaultReminderOption(),
                     onSaved: {
@@ -178,6 +193,7 @@ struct TripDetailView: View {
                     mode: .edit(item),
                     repository: itineraryRepository,
                     notificationService: notificationService,
+                    locationActions: locationActions,
                     tripRange: viewModel.trip.startDate...viewModel.trip.endDate,
                     associatedDocuments: documentsViewModel.documents.attached(toItemId: item.id),
                     resolveDocumentURL: { documentsViewModel.absoluteURL(for: $0) },
@@ -351,6 +367,7 @@ private struct FocusCard: View {
             documentRepository: CoreDataDocumentRepository(stack: stack),
             documentStorage: FileManagerDocumentStorageService(),
             settingsStore: UserDefaultsSettingsStore(defaults: UserDefaults(suiteName: "TripKite-Preview")!),
+            locationActions: SystemLocationActionService(),
             onChange: {}
         )
     }

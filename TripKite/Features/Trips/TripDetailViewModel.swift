@@ -11,6 +11,7 @@ final class TripDetailViewModel: ObservableObject {
     private let itineraryRepository: ItineraryRepository
     private let tripRepository: TripRepository
     private let notificationService: NotificationSchedulingService
+    private let locationActions: LocationActionService
     private let now: @Sendable () -> Date
 
     init(
@@ -18,12 +19,14 @@ final class TripDetailViewModel: ObservableObject {
         itineraryRepository: ItineraryRepository,
         tripRepository: TripRepository,
         notificationService: NotificationSchedulingService,
+        locationActions: LocationActionService,
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.trip = trip
         self.itineraryRepository = itineraryRepository
         self.tripRepository = tripRepository
         self.notificationService = notificationService
+        self.locationActions = locationActions
         self.now = now
     }
 
@@ -57,5 +60,23 @@ final class TripDetailViewModel: ObservableObject {
         if let updated = try? await tripRepository.trip(with: trip.id) {
             trip = updated
         }
+    }
+
+    // MARK: - Location quick-actions
+
+    func availableLocationActions(for item: ItineraryItem) -> Set<LocationAction> {
+        LocationActionAvailability.actions(name: item.locationName, address: item.address)
+    }
+
+    func openInMaps(for item: ItineraryItem) {
+        locationActions.openInMaps(name: item.locationName, address: item.address)
+    }
+
+    func copyAddress(of item: ItineraryItem) {
+        locationActions.copy(text: item.address)
+    }
+
+    func copyLocationName(of item: ItineraryItem) {
+        locationActions.copy(text: item.locationName)
     }
 }

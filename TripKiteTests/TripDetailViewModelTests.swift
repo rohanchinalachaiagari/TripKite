@@ -27,7 +27,8 @@ final class TripDetailViewModelTests: XCTestCase {
             trip: trip,
             itineraryRepository: itineraryMock,
             tripRepository: tripMock,
-            notificationService: MockNotificationSchedulingService()
+            notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService()
         )
         await vm.load()
 
@@ -46,7 +47,8 @@ final class TripDetailViewModelTests: XCTestCase {
             trip: trip,
             itineraryRepository: itineraryMock,
             tripRepository: tripMock,
-            notificationService: MockNotificationSchedulingService()
+            notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService()
         )
         await vm.load()
 
@@ -70,7 +72,8 @@ final class TripDetailViewModelTests: XCTestCase {
             trip: trip,
             itineraryRepository: itineraryMock,
             tripRepository: tripMock,
-            notificationService: MockNotificationSchedulingService()
+            notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService()
         )
         await vm.load()
         XCTAssertEqual(vm.items.count, 1)
@@ -100,7 +103,8 @@ final class TripDetailViewModelTests: XCTestCase {
             trip: trip,
             itineraryRepository: itineraryMock,
             tripRepository: tripMock,
-            notificationService: MockNotificationSchedulingService()
+            notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService()
         )
         await vm.load()
         await vm.deleteItem(item)
@@ -134,6 +138,7 @@ final class TripDetailViewModelTests: XCTestCase {
             itineraryRepository: itineraryMock,
             tripRepository: tripMock,
             notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService(),
             now: { now }
         )
         await vm.load()
@@ -148,6 +153,7 @@ final class TripDetailViewModelTests: XCTestCase {
             itineraryRepository: MockItineraryRepository(),
             tripRepository: MockTripRepository(),
             notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService(),
             now: { Date() }
         )
         XCTAssertNil(vm.focus)
@@ -165,7 +171,8 @@ final class TripDetailViewModelTests: XCTestCase {
             trip: original,
             itineraryRepository: itineraryMock,
             tripRepository: tripMock,
-            notificationService: MockNotificationSchedulingService()
+            notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService()
         )
         await vm.refreshTrip()
 
@@ -189,7 +196,8 @@ final class TripDetailViewModelTests: XCTestCase {
             trip: trip,
             itineraryRepository: itineraryMock,
             tripRepository: MockTripRepository(),
-            notificationService: notifications
+            notificationService: notifications,
+            locationActions: MockLocationActionService()
         )
         await vm.load()
         await vm.deleteItem(item)
@@ -198,6 +206,126 @@ final class TripDetailViewModelTests: XCTestCase {
         XCTAssertEqual(cancellations, [item.id])
         let stored = await itineraryMock.storage[item.id]
         XCTAssertNil(stored)
+    }
+
+    // MARK: - Location quick-actions
+
+    func testOpenInMaps_DelegatesToServiceWithItemLocationFields() {
+        let trip = makeTrip()
+        let item = ItineraryItem(
+            tripId: trip.id,
+            title: "Hotel",
+            type: .hotel,
+            startDate: Date(),
+            locationName: "Park Hyatt",
+            address: "3-7-1 Nishi Shinjuku"
+        )
+        let actions = MockLocationActionService()
+        let vm = makeViewModel(trip: trip, locationActions: actions)
+
+        vm.openInMaps(for: item)
+
+        XCTAssertEqual(
+            actions.openInMapsCalls,
+            [MockLocationActionService.OpenInMapsCall(name: "Park Hyatt", address: "3-7-1 Nishi Shinjuku")]
+        )
+        XCTAssertTrue(actions.copyCalls.isEmpty)
+    }
+
+    func testCopyAddress_DelegatesToService() {
+        let trip = makeTrip()
+        let item = ItineraryItem(
+            tripId: trip.id,
+            title: "Hotel",
+            type: .hotel,
+            startDate: Date(),
+            locationName: "Park Hyatt",
+            address: "3-7-1 Nishi Shinjuku"
+        )
+        let actions = MockLocationActionService()
+        let vm = makeViewModel(trip: trip, locationActions: actions)
+
+        vm.copyAddress(of: item)
+
+        XCTAssertEqual(actions.copyCalls, ["3-7-1 Nishi Shinjuku"])
+        XCTAssertTrue(actions.openInMapsCalls.isEmpty)
+    }
+
+    func testCopyLocationName_DelegatesToService() {
+        let trip = makeTrip()
+        let item = ItineraryItem(
+            tripId: trip.id,
+            title: "Hotel",
+            type: .hotel,
+            startDate: Date(),
+            locationName: "Park Hyatt",
+            address: ""
+        )
+        let actions = MockLocationActionService()
+        let vm = makeViewModel(trip: trip, locationActions: actions)
+
+        vm.copyLocationName(of: item)
+
+        XCTAssertEqual(actions.copyCalls, ["Park Hyatt"])
+    }
+
+    func testAvailableLocationActions_ReflectsItemFields() {
+        let trip = makeTrip()
+        let both = ItineraryItem(
+            tripId: trip.id,
+            title: "Both",
+            type: .activity,
+            startDate: Date(),
+            locationName: "Café",
+            address: "1 Apple Park Way"
+        )
+        let addressOnly = ItineraryItem(
+            tripId: trip.id,
+            title: "Addr",
+            type: .activity,
+            startDate: Date(),
+            locationName: "",
+            address: "1 Apple Park Way"
+        )
+        let nameOnly = ItineraryItem(
+            tripId: trip.id,
+            title: "Name",
+            type: .activity,
+            startDate: Date(),
+            locationName: "Café",
+            address: ""
+        )
+        let neither = ItineraryItem(
+            tripId: trip.id,
+            title: "Empty",
+            type: .activity,
+            startDate: Date()
+        )
+        let vm = makeViewModel(trip: trip, locationActions: MockLocationActionService())
+
+        XCTAssertEqual(vm.availableLocationActions(for: both), [.openInMaps, .copyAddress, .copyLocationName])
+        XCTAssertEqual(vm.availableLocationActions(for: addressOnly), [.openInMaps, .copyAddress])
+        XCTAssertEqual(vm.availableLocationActions(for: nameOnly), [.openInMaps, .copyLocationName])
+        XCTAssertTrue(vm.availableLocationActions(for: neither).isEmpty)
+    }
+
+    // MARK: - Helpers
+
+    // No default value for `locationActions` because Swift's strict
+    // concurrency treats default-value expressions as a nonisolated context,
+    // and `MockLocationActionService.init` is MainActor-isolated. Callers
+    // construct the mock from inside their (MainActor) test body.
+    private func makeViewModel(
+        trip: Trip,
+        locationActions: MockLocationActionService
+    ) -> TripDetailViewModel {
+        TripDetailViewModel(
+            trip: trip,
+            itineraryRepository: MockItineraryRepository(),
+            tripRepository: MockTripRepository(),
+            notificationService: MockNotificationSchedulingService(),
+            locationActions: locationActions
+        )
     }
 
     private func makeTrip() -> Trip {

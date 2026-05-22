@@ -12,7 +12,8 @@ final class ItineraryItemEditorViewModelTests: XCTestCase {
         let vm = ItineraryItemEditorViewModel(
             mode: .create(tripId: tripId, defaultStartDate: Date()),
             repository: mock,
-            notificationService: MockNotificationSchedulingService()
+            notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService()
         )
         vm.title = "Flight"
 
@@ -33,7 +34,8 @@ final class ItineraryItemEditorViewModelTests: XCTestCase {
         let vm = ItineraryItemEditorViewModel(
             mode: .create(tripId: tripId, defaultStartDate: Date()),
             repository: mock,
-            notificationService: MockNotificationSchedulingService()
+            notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService()
         )
         vm.title = "  Flight  "
         vm.locationName = "  SFO  "
@@ -62,7 +64,8 @@ final class ItineraryItemEditorViewModelTests: XCTestCase {
         let vm = ItineraryItemEditorViewModel(
             mode: .edit(original),
             repository: mock,
-            notificationService: MockNotificationSchedulingService()
+            notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService()
         )
         vm.title = "Updated"
 
@@ -86,7 +89,8 @@ final class ItineraryItemEditorViewModelTests: XCTestCase {
         let vm = ItineraryItemEditorViewModel(
             mode: .create(tripId: tripId, defaultStartDate: Date()),
             repository: mock,
-            notificationService: MockNotificationSchedulingService()
+            notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService()
         )
         vm.title = "   "
 
@@ -107,7 +111,8 @@ final class ItineraryItemEditorViewModelTests: XCTestCase {
         let vm = ItineraryItemEditorViewModel(
             mode: .create(tripId: tripId, defaultStartDate: start),
             repository: mock,
-            notificationService: MockNotificationSchedulingService()
+            notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService()
         )
         vm.title = "Flight"
         vm.hasEndDate = true
@@ -127,7 +132,8 @@ final class ItineraryItemEditorViewModelTests: XCTestCase {
         let vm = ItineraryItemEditorViewModel(
             mode: .create(tripId: tripId, defaultStartDate: Date()),
             repository: mock,
-            notificationService: MockNotificationSchedulingService()
+            notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService()
         )
         vm.title = "Quick stop"
         vm.hasEndDate = false
@@ -144,7 +150,8 @@ final class ItineraryItemEditorViewModelTests: XCTestCase {
         let vm = ItineraryItemEditorViewModel(
             mode: .create(tripId: UUID(), defaultStartDate: Date()),
             repository: mock,
-            notificationService: MockNotificationSchedulingService()
+            notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService()
         )
         vm.title = ""
         XCTAssertTrue(vm.isSaveDisabled)
@@ -155,7 +162,8 @@ final class ItineraryItemEditorViewModelTests: XCTestCase {
         let vm = ItineraryItemEditorViewModel(
             mode: .create(tripId: UUID(), defaultStartDate: Date()),
             repository: mock,
-            notificationService: MockNotificationSchedulingService()
+            notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService()
         )
         vm.title = "Flight"
         XCTAssertFalse(vm.isSaveDisabled)
@@ -173,7 +181,8 @@ final class ItineraryItemEditorViewModelTests: XCTestCase {
         let vm = ItineraryItemEditorViewModel(
             mode: .create(tripId: tripId, defaultStartDate: futureStart),
             repository: mock,
-            notificationService: notifications
+            notificationService: notifications,
+            locationActions: MockLocationActionService()
         )
         vm.title = "Flight"
         vm.reminderOption = .minutesBefore15
@@ -197,7 +206,8 @@ final class ItineraryItemEditorViewModelTests: XCTestCase {
         let vm = ItineraryItemEditorViewModel(
             mode: .create(tripId: tripId, defaultStartDate: Date()),
             repository: mock,
-            notificationService: notifications
+            notificationService: notifications,
+            locationActions: MockLocationActionService()
         )
         vm.title = "Quick stop"
         vm.reminderOption = .none
@@ -226,7 +236,8 @@ final class ItineraryItemEditorViewModelTests: XCTestCase {
         let vm = ItineraryItemEditorViewModel(
             mode: .edit(existing),
             repository: mock,
-            notificationService: notifications
+            notificationService: notifications,
+            locationActions: MockLocationActionService()
         )
         vm.reminderOption = .none
 
@@ -249,7 +260,8 @@ final class ItineraryItemEditorViewModelTests: XCTestCase {
         let vm = ItineraryItemEditorViewModel(
             mode: .create(tripId: tripId, defaultStartDate: Date().addingTimeInterval(60)),
             repository: mock,
-            notificationService: notifications
+            notificationService: notifications,
+            locationActions: MockLocationActionService()
         )
         vm.title = "Right now"
         vm.reminderOption = .hourBefore1
@@ -272,6 +284,7 @@ final class ItineraryItemEditorViewModelTests: XCTestCase {
             mode: .create(tripId: tripId, defaultStartDate: insideStart),
             repository: mock,
             notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService(),
             tripRange: tripRange
         )
         vm.title = "Inside"
@@ -296,6 +309,7 @@ final class ItineraryItemEditorViewModelTests: XCTestCase {
             mode: .create(tripId: tripId, defaultStartDate: outsideStart),
             repository: mock,
             notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService(),
             tripRange: tripRange
         )
         vm.title = "Outside"
@@ -320,6 +334,7 @@ final class ItineraryItemEditorViewModelTests: XCTestCase {
             mode: .create(tripId: tripId, defaultStartDate: outsideStart),
             repository: mock,
             notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService(),
             tripRange: tripRange
         )
         vm.title = "Outside"
@@ -351,6 +366,7 @@ final class ItineraryItemEditorViewModelTests: XCTestCase {
             mode: .edit(existing),
             repository: mock,
             notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService(),
             tripRange: tripRange
         )
 
@@ -377,6 +393,142 @@ final class ItineraryItemEditorViewModelTests: XCTestCase {
         return (start...end, inside)
     }
 
+    // MARK: - Location quick-actions
+
+    func testAvailableLocationActions_ReflectsLiveBindings() {
+        let mock = MockItineraryRepository()
+        let vm = ItineraryItemEditorViewModel(
+            mode: .create(tripId: UUID(), defaultStartDate: Date()),
+            repository: mock,
+            notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService()
+        )
+
+        XCTAssertTrue(vm.availableLocationActions.isEmpty)
+
+        vm.address = "1 Apple Park Way"
+        XCTAssertEqual(vm.availableLocationActions, [.openInMaps, .copyAddress])
+
+        vm.locationName = "Apple Park"
+        XCTAssertEqual(vm.availableLocationActions, [.openInMaps, .copyAddress, .copyLocationName])
+
+        vm.address = "   "
+        XCTAssertEqual(vm.availableLocationActions, [.openInMaps, .copyLocationName])
+    }
+
+    func testOpenInMaps_UsesLiveBindingsIncludingUnsavedEdits() {
+        let mock = MockItineraryRepository()
+        let actions = MockLocationActionService()
+        let vm = ItineraryItemEditorViewModel(
+            mode: .create(tripId: UUID(), defaultStartDate: Date()),
+            repository: mock,
+            notificationService: MockNotificationSchedulingService(),
+            locationActions: actions
+        )
+        vm.locationName = "Park Hyatt"
+        vm.address = "3-7-1 Nishi Shinjuku"
+
+        vm.openInMaps()
+
+        XCTAssertEqual(
+            actions.openInMapsCalls,
+            [MockLocationActionService.OpenInMapsCall(name: "Park Hyatt", address: "3-7-1 Nishi Shinjuku")]
+        )
+    }
+
+    func testCopyAddress_DelegatesCurrentAddress() {
+        let mock = MockItineraryRepository()
+        let actions = MockLocationActionService()
+        let vm = ItineraryItemEditorViewModel(
+            mode: .create(tripId: UUID(), defaultStartDate: Date()),
+            repository: mock,
+            notificationService: MockNotificationSchedulingService(),
+            locationActions: actions
+        )
+        vm.address = "  221B Baker Street  "
+
+        vm.copyAddress()
+
+        XCTAssertEqual(actions.copyCalls, ["  221B Baker Street  "])
+    }
+
+    func testCopyLocationName_DelegatesCurrentLocationName() {
+        let mock = MockItineraryRepository()
+        let actions = MockLocationActionService()
+        let vm = ItineraryItemEditorViewModel(
+            mode: .create(tripId: UUID(), defaultStartDate: Date()),
+            repository: mock,
+            notificationService: MockNotificationSchedulingService(),
+            locationActions: actions
+        )
+        vm.locationName = "Café de Flore"
+
+        vm.copyLocationName()
+
+        XCTAssertEqual(actions.copyCalls, ["Café de Flore"])
+    }
+
+    // MARK: - Copy feedback
+
+    func testInitialRecentlyCopiedField_IsNil() {
+        let mock = MockItineraryRepository()
+        let vm = ItineraryItemEditorViewModel(
+            mode: .create(tripId: UUID(), defaultStartDate: Date()),
+            repository: mock,
+            notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService()
+        )
+        XCTAssertNil(vm.recentlyCopiedField)
+    }
+
+    func testCopyAddress_SetsRecentlyCopiedField_ToAddress() {
+        let mock = MockItineraryRepository()
+        let vm = ItineraryItemEditorViewModel(
+            mode: .create(tripId: UUID(), defaultStartDate: Date()),
+            repository: mock,
+            notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService()
+        )
+        vm.address = "1 Apple Park Way"
+
+        vm.copyAddress()
+
+        XCTAssertEqual(vm.recentlyCopiedField, .address)
+    }
+
+    func testCopyLocationName_SetsRecentlyCopiedField_ToName() {
+        let mock = MockItineraryRepository()
+        let vm = ItineraryItemEditorViewModel(
+            mode: .create(tripId: UUID(), defaultStartDate: Date()),
+            repository: mock,
+            notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService()
+        )
+        vm.locationName = "Café de Flore"
+
+        vm.copyLocationName()
+
+        XCTAssertEqual(vm.recentlyCopiedField, .name)
+    }
+
+    func testCopyAddress_AfterCopyLocationName_SwitchesField() {
+        let mock = MockItineraryRepository()
+        let vm = ItineraryItemEditorViewModel(
+            mode: .create(tripId: UUID(), defaultStartDate: Date()),
+            repository: mock,
+            notificationService: MockNotificationSchedulingService(),
+            locationActions: MockLocationActionService()
+        )
+        vm.locationName = "Café"
+        vm.address = "172 Bd Saint-Germain"
+
+        vm.copyLocationName()
+        XCTAssertEqual(vm.recentlyCopiedField, .name)
+
+        vm.copyAddress()
+        XCTAssertEqual(vm.recentlyCopiedField, .address)
+    }
+
     func testReminderOption_FirstChangeFromNone_PromptsForAuthorization() async {
         let tripId = UUID()
         let mock = MockItineraryRepository()
@@ -387,7 +539,8 @@ final class ItineraryItemEditorViewModelTests: XCTestCase {
         let vm = ItineraryItemEditorViewModel(
             mode: .create(tripId: tripId, defaultStartDate: Date()),
             repository: mock,
-            notificationService: notifications
+            notificationService: notifications,
+            locationActions: MockLocationActionService()
         )
         await vm.loadAuthorizationStatus()
 

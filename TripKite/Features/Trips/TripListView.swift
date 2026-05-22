@@ -9,6 +9,7 @@ struct TripListView: View {
     private let documentRepository: DocumentRepository
     private let documentStorage: DocumentStorageService
     private let settingsStore: SettingsStore
+    private let locationActions: LocationActionService
 
     @State private var navigationPath = NavigationPath()
     @State private var isCreating = false
@@ -21,6 +22,7 @@ struct TripListView: View {
         documentRepository: DocumentRepository,
         documentStorage: DocumentStorageService,
         settingsStore: SettingsStore,
+        locationActions: LocationActionService,
         appRouter: AppRouter
     ) {
         self.tripRepository = tripRepository
@@ -29,6 +31,7 @@ struct TripListView: View {
         self.documentRepository = documentRepository
         self.documentStorage = documentStorage
         self.settingsStore = settingsStore
+        self.locationActions = locationActions
         self.appRouter = appRouter
         _viewModel = StateObject(
             wrappedValue: TripListViewModel(
@@ -58,6 +61,7 @@ struct TripListView: View {
                     documentRepository: documentRepository,
                     documentStorage: documentStorage,
                     settingsStore: settingsStore,
+                    locationActions: locationActions,
                     onChange: { Task { await viewModel.load() } }
                 )
             }
@@ -215,10 +219,15 @@ private struct TripRow: View {
                     .foregroundStyle(TKColors.textPrimary)
                     .lineLimit(2)
 
-                Label(trip.destination, systemImage: "mappin.and.ellipse")
-                    .font(TKTypography.cardSubtitle)
-                    .foregroundStyle(TKColors.textSecondary)
-                    .lineLimit(1)
+                // Tight HStack instead of `Label` so the pin and destination
+                // read as one cohesive metadata row at this font size.
+                HStack(spacing: TKSpacing.xs) {
+                    Image(systemName: "mappin.and.ellipse")
+                    Text(trip.destination)
+                }
+                .font(TKTypography.cardSubtitle)
+                .foregroundStyle(TKColors.textSecondary)
+                .lineLimit(1)
 
                 HStack(spacing: TKSpacing.sm) {
                     Text(TripDateFormatter.dateRange(from: trip.startDate, to: trip.endDate))
@@ -274,6 +283,7 @@ private struct TripRow: View {
         documentRepository: CoreDataDocumentRepository(stack: stack),
         documentStorage: FileManagerDocumentStorageService(),
         settingsStore: UserDefaultsSettingsStore(defaults: UserDefaults(suiteName: "TripKite-Preview")!),
+        locationActions: SystemLocationActionService(),
         appRouter: AppRouter()
     )
 }
@@ -287,6 +297,7 @@ private struct TripRow: View {
         documentRepository: CoreDataDocumentRepository(stack: stack),
         documentStorage: FileManagerDocumentStorageService(),
         settingsStore: UserDefaultsSettingsStore(defaults: UserDefaults(suiteName: "TripKite-Preview")!),
+        locationActions: SystemLocationActionService(),
         appRouter: AppRouter()
     )
 }

@@ -1,6 +1,14 @@
 import Foundation
 import Combine
 
+// Identifies the inline copy button that the user most recently tapped, so
+// the editor view can swap that field's copy icon to a checkmark for a brief
+// confirmation window. Cleared automatically after a short delay.
+enum CopiedLocationField: Hashable {
+    case name
+    case address
+}
+
 @MainActor
 final class ItineraryItemEditorViewModel: ObservableObject {
     enum Mode {
@@ -34,18 +42,27 @@ final class ItineraryItemEditorViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var pendingOutsideRangeConfirmation: Bool = false
     @Published private(set) var isSaving = false
+    // Drives the inline "Copied" confirmation on the trailing copy icons.
+    // Reset to nil after a short delay; rapid retaps cancel the pending
+    // reset so the user never sees a stale checkmark on the wrong field.
+    @Published private(set) var recentlyCopiedField: CopiedLocationField?
 
     let mode: Mode
     private let tripId: UUID
     private let tripRange: ClosedRange<Date>?
     private let repository: ItineraryRepository
     private let notificationService: NotificationSchedulingService
+    private let locationActions: LocationActionService
     private let now: @Sendable () -> Date
+
+    private var copiedResetTask: Task<Void, Never>?
+    private let copyFeedbackDuration: Duration = .milliseconds(1300)
 
     init(
         mode: Mode,
         repository: ItineraryRepository,
         notificationService: NotificationSchedulingService,
+        locationActions: LocationActionService,
         tripRange: ClosedRange<Date>? = nil,
         defaultReminderOption: ReminderOption = .none,
         now: @escaping @Sendable () -> Date = { Date() }
@@ -54,6 +71,7 @@ final class ItineraryItemEditorViewModel: ObservableObject {
         self.tripRange = tripRange
         self.repository = repository
         self.notificationService = notificationService
+        self.locationActions = locationActions
         self.now = now
 
         switch mode {
@@ -209,5 +227,42 @@ final class ItineraryItemEditorViewModel: ObservableObject {
 
         errorMessage = nil
         return true
+    }
+
+    // MARK: - Location quick-actions
+    //
+    // Reads the live `@Published` bindings (which may include unsaved edits)
+    // so users can copy an address they just typed. The service trims the
+    // values on the way out — these methods do not mutate view state.
+
+    var availableLocationActions: Set<LocationAction> {
+        LocationActionAvailability.actions(name: locationName, address: address)
+    }
+
+    func openInMaps() {
+        locationActions.openInMaps(name: locationName, address: address)
+    }
+
+    func copyAddress() {
+        locationActions.copy(text: address)
+        markCopied(.address)
+    }
+
+    func copyLocationName() {
+        locationActions.copy(text: locationName)
+        markCopied(.name)
+    }
+
+    private func markCopied(_ field: CopiedLocationField) {
+        copiedResetTask?.cancel()
+        recentlyCopiedField = field
+        let duration = copyFeedbackDuration
+        copiedResetTask = Task { [weak self] in
+            try? await Task.sleep(for: duration)
+            if Task.isCancelled { return }
+            await MainActor.run {
+                self?.recentlyCopiedField = nil
+            }
+        }
     }
 }

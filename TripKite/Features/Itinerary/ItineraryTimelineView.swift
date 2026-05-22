@@ -6,6 +6,10 @@ struct ItineraryTimelineView: View {
     var onSelect: ((ItineraryItem) -> Void)? = nil
     var onDelete: ((ItineraryItem) -> Void)? = nil
     var onAddItem: (() -> Void)? = nil
+    // Optional location quick-actions. The closure is called with the action
+    // the user picked; the host view model decides how to fulfill it. When
+    // nil, no Location section appears in the row context menu.
+    var onLocationAction: ((ItineraryItem, LocationAction) -> Void)? = nil
 
     private var groupedByDay: [(day: Date, items: [ItineraryItem])] {
         let calendar = Calendar.current
@@ -66,8 +70,42 @@ struct ItineraryTimelineView: View {
                     }
                 }
             }
+            .contextMenu {
+                locationContextMenu(for: item)
+            }
         } else {
             content
+        }
+    }
+
+    @ViewBuilder
+    private func locationContextMenu(for item: ItineraryItem) -> some View {
+        if let onLocationAction {
+            let available = LocationActionAvailability.actions(
+                name: item.locationName,
+                address: item.address
+            )
+            if available.contains(.openInMaps) {
+                Button {
+                    onLocationAction(item, .openInMaps)
+                } label: {
+                    Label("Open in Maps", systemImage: "map")
+                }
+            }
+            if available.contains(.copyAddress) {
+                Button {
+                    onLocationAction(item, .copyAddress)
+                } label: {
+                    Label("Copy Address", systemImage: "doc.on.doc")
+                }
+            }
+            if available.contains(.copyLocationName) {
+                Button {
+                    onLocationAction(item, .copyLocationName)
+                } label: {
+                    Label("Copy Location Name", systemImage: "mappin")
+                }
+            }
         }
     }
 }

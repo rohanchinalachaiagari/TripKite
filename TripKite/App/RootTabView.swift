@@ -22,6 +22,7 @@ struct RootTabView: View {
     private let settingsStore: SettingsStore
     private let dataManagement: DataManagementService
     private let searchService: SearchService
+    private let locationActions: LocationActionService
 
     @State private var selectedTab: Tab = .trips
 
@@ -41,6 +42,7 @@ struct RootTabView: View {
         settingsStore: SettingsStore,
         dataManagement: DataManagementService,
         searchService: SearchService,
+        locationActions: LocationActionService,
         appRouter: AppRouter
     ) {
         self.tripRepository = tripRepository
@@ -51,6 +53,7 @@ struct RootTabView: View {
         self.settingsStore = settingsStore
         self.dataManagement = dataManagement
         self.searchService = searchService
+        self.locationActions = locationActions
         self.appRouter = appRouter
     }
 
@@ -63,6 +66,7 @@ struct RootTabView: View {
                 documentRepository: documentRepository,
                 documentStorage: documentStorage,
                 settingsStore: settingsStore,
+                locationActions: locationActions,
                 appRouter: appRouter
             )
             .tabItem {
@@ -146,6 +150,7 @@ private func previewDependencies(stack: CoreDataStack) -> (
             itineraryRepository: CoreDataItineraryRepository(stack: stack),
             documentRepository: CoreDataDocumentRepository(stack: stack)
         ),
+        locationActions: SystemLocationActionService(),
         appRouter: AppRouter()
     )
 }
@@ -166,6 +171,7 @@ private func previewDependencies(stack: CoreDataStack) -> (
             itineraryRepository: CoreDataItineraryRepository(stack: stack),
             documentRepository: CoreDataDocumentRepository(stack: stack)
         ),
+        locationActions: SystemLocationActionService(),
         appRouter: AppRouter()
     )
 }

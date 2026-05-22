@@ -13,6 +13,7 @@ struct ItineraryItemEditorView: View {
         mode: ItineraryItemEditorViewModel.Mode,
         repository: ItineraryRepository,
         notificationService: NotificationSchedulingService,
+        locationActions: LocationActionService,
         tripRange: ClosedRange<Date>? = nil,
         defaultReminderOption: ReminderOption = .none,
         associatedDocuments: [TravelDocument] = [],
@@ -24,6 +25,7 @@ struct ItineraryItemEditorView: View {
                 mode: mode,
                 repository: repository,
                 notificationService: notificationService,
+                locationActions: locationActions,
                 tripRange: tripRange,
                 defaultReminderOption: defaultReminderOption
             )
@@ -53,8 +55,9 @@ struct ItineraryItemEditorView: View {
             }
 
             Section("Location") {
-                TextField("Location name", text: $viewModel.locationName)
-                TextField("Address", text: $viewModel.address)
+                locationNameField
+                addressField
+                openInMapsButton
             }
 
             Section("Reminder") {
@@ -139,6 +142,67 @@ struct ItineraryItemEditorView: View {
         .quickLookSheet(url: $previewURL)
     }
 
+    // Location-name and address fields each carry an inline trailing copy
+    // button that surfaces only when the live binding has non-blank content.
+    // The button uses `.borderless` so taps on the symbol don't compete with
+    // taps on the surrounding row, and the field stays the primary tap
+    // target for editing.
+
+    private var locationNameField: some View {
+        HStack(spacing: TKSpacing.sm) {
+            TextField("Location name", text: $viewModel.locationName)
+            if viewModel.availableLocationActions.contains(.copyLocationName) {
+                copyFieldButton(
+                    field: .name,
+                    label: "Copy location name"
+                ) {
+                    viewModel.copyLocationName()
+                }
+            }
+        }
+    }
+
+    private var addressField: some View {
+        HStack(spacing: TKSpacing.sm) {
+            TextField("Address", text: $viewModel.address)
+            if viewModel.availableLocationActions.contains(.copyAddress) {
+                copyFieldButton(
+                    field: .address,
+                    label: "Copy address"
+                ) {
+                    viewModel.copyAddress()
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var openInMapsButton: some View {
+        if viewModel.availableLocationActions.contains(.openInMaps) {
+            Button {
+                viewModel.openInMaps()
+            } label: {
+                Label("Open in Maps", systemImage: "map")
+            }
+        }
+    }
+
+    private func copyFieldButton(
+        field: CopiedLocationField,
+        label: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        let copied = viewModel.recentlyCopiedField == field
+        return Button(action: action) {
+            Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                .font(TKTypography.cardSubtitle)
+                .foregroundStyle(copied ? TKColors.brand : TKColors.textSecondary)
+        }
+        .buttonStyle(.borderless)
+        .accessibilityLabel(copied ? "Copied" : label)
+        .animation(.easeInOut(duration: 0.15), value: copied)
+    }
+
     // Compact read-only document row. Document management (rename, delete,
     // reassign) stays in the trip-level Documents section. Tap previews via
     // QuickLook using the same flow the trip-level section uses.
@@ -159,6 +223,7 @@ struct ItineraryItemEditorView: View {
             mode: .create(tripId: MockData.tokyoTrip.id, defaultStartDate: MockData.tokyoTrip.startDate),
             repository: CoreDataItineraryRepository(stack: stack),
             notificationService: UserNotificationSchedulingService(),
+            locationActions: SystemLocationActionService(),
             onSaved: {}
         )
     }
@@ -171,6 +236,7 @@ struct ItineraryItemEditorView: View {
             mode: .edit(MockData.tokyoItinerary[0]),
             repository: CoreDataItineraryRepository(stack: stack),
             notificationService: UserNotificationSchedulingService(),
+            locationActions: SystemLocationActionService(),
             onSaved: {}
         )
     }

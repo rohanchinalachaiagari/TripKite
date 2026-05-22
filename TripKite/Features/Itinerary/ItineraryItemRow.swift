@@ -21,10 +21,17 @@ struct ItineraryItemRow: View {
                     .foregroundStyle(TKColors.textSecondary)
 
                 if !item.locationName.isEmpty {
-                    Label(item.locationName, systemImage: "mappin")
-                        .font(TKTypography.metadata)
-                        .foregroundStyle(TKColors.textSecondary)
-                        .lineLimit(1)
+                    // Manual HStack rather than `Label` because `Label`'s
+                    // default icon/title spacing reads as a visible gap at
+                    // metadata font sizes, making the pin feel detached from
+                    // the place name.
+                    HStack(spacing: TKSpacing.xs) {
+                        Image(systemName: "mappin")
+                        Text(item.locationName)
+                    }
+                    .font(TKTypography.metadata)
+                    .foregroundStyle(TKColors.textSecondary)
+                    .lineLimit(1)
                 }
             }
 
