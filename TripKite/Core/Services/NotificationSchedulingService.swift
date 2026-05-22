@@ -7,6 +7,10 @@ protocol NotificationSchedulingService: Sendable {
     func scheduleReminder(for item: ItineraryItem) async throws
     func cancelReminder(forItemId itemId: UUID) async
     func cancelReminders(forTripId tripId: UUID) async
+    // Belt-and-suspenders sweep used by Clear All Data so any pending request
+    // whose trip is no longer in Core Data (e.g. orphaned by a prior crash)
+    // is still removed.
+    func cancelAllReminders() async
 }
 
 enum NotificationAuthorizationStatus: Equatable {
@@ -117,6 +121,11 @@ nonisolated final class UserNotificationSchedulingService: NotificationSchedulin
         guard !matchedIds.isEmpty else { return }
         center.removePendingNotificationRequests(withIdentifiers: matchedIds)
         center.removeDeliveredNotifications(withIdentifiers: matchedIds)
+    }
+
+    func cancelAllReminders() async {
+        center.removeAllPendingNotificationRequests()
+        center.removeAllDeliveredNotifications()
     }
 
     private static func identifier(forTripId tripId: UUID, itemId: UUID) -> String {

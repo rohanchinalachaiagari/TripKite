@@ -18,11 +18,12 @@ enum ItineraryValidationError: LocalizedError, Equatable {
 }
 
 enum ItineraryValidator {
-    // V1 hard rules:
+    // Hard rules:
     //   - title cannot be empty
     //   - if endDate is set, it cannot be before startDate
     //   - if reminderOffset is set, it cannot be negative
-    // TODO (future): soft warning when startDate falls outside the parent trip's range.
+    // The soft "outside trip range" warning is handled separately by the
+    // editor view model via `pendingOutsideRangeConfirmation`.
     static func validate(
         title: String,
         startDate: Date,

@@ -15,10 +15,14 @@ struct TripResultRow: View {
                         .foregroundStyle(TKColors.textPrimary)
                         .lineLimit(2)
 
-                    Label(trip.destination, systemImage: "mappin.and.ellipse")
-                        .font(TKTypography.cardSubtitle)
-                        .foregroundStyle(TKColors.textSecondary)
-                        .lineLimit(1)
+                    HStack(spacing: TKSpacing.xs) {
+                        Image(systemName: "mappin.and.ellipse")
+                            .accessibilityHidden(true)
+                        Text(trip.destination)
+                    }
+                    .font(TKTypography.cardSubtitle)
+                    .foregroundStyle(TKColors.textSecondary)
+                    .lineLimit(1)
 
                     HStack(spacing: TKSpacing.sm) {
                         Text(TripDateFormatter.dateRange(from: trip.startDate, to: trip.endDate))
@@ -55,6 +59,7 @@ struct ItineraryResultRow: View {
                         TKColors.itinerary(item.type).opacity(0.18),
                         in: RoundedRectangle(cornerRadius: TKRadius.small, style: .continuous)
                     )
+                    .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: TKSpacing.xs) {
                     Text(item.title)

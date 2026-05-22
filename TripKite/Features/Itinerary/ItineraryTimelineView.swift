@@ -26,7 +26,7 @@ struct ItineraryTimelineView: View {
             Section {
                 TKEmptyStateView(
                     systemImage: "calendar.badge.plus",
-                    title: "No itinerary items yet",
+                    title: "Nothing scheduled yet",
                     message: "Add flights, hotels, and activities to build your trip timeline.",
                     actionTitle: onAddItem != nil ? "Add your first item" : nil,
                     actionSystemImage: "plus",

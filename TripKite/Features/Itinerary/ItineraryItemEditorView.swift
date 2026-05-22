@@ -197,6 +197,12 @@ struct ItineraryItemEditorView: View {
             Image(systemName: copied ? "checkmark" : "doc.on.doc")
                 .font(TKTypography.cardSubtitle)
                 .foregroundStyle(copied ? TKColors.brand : TKColors.textSecondary)
+                // Expand the hit area to the HIG minimum without enlarging the
+                // visible glyph. The Image itself stays at its natural size;
+                // .frame + .contentShape make the surrounding 44pt region
+                // tappable.
+                .frame(minWidth: 44, minHeight: 44, alignment: .trailing)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.borderless)
         .accessibilityLabel(copied ? "Copied" : label)

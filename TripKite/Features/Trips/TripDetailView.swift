@@ -208,8 +208,16 @@ struct TripDetailView: View {
             allowedContentTypes: [.pdf, .image, .data],
             allowsMultipleSelection: false
         ) { result in
-            if case .success(let urls) = result, let url = urls.first {
-                Task { await documentsViewModel.attach(from: url) }
+            switch result {
+            case .success(let urls):
+                if let url = urls.first {
+                    Task { await documentsViewModel.attach(from: url) }
+                }
+            case .failure(let error):
+                let ns = error as NSError
+                if !(ns.domain == NSCocoaErrorDomain && ns.code == NSUserCancelledError) {
+                    documentsViewModel.errorMessage = error.localizedDescription
+                }
             }
         }
         .photosPicker(
@@ -248,18 +256,24 @@ struct TripDetailView: View {
         let status = viewModel.trip.status()
         return VStack(alignment: .leading, spacing: TKSpacing.sm) {
             HStack(alignment: .firstTextBaseline) {
-                Label(viewModel.trip.destination, systemImage: "mappin.and.ellipse")
-                    .font(TKTypography.heroTitle)
-                    .foregroundStyle(TKColors.textPrimary)
-                    .lineLimit(2)
+                HStack(spacing: TKSpacing.xs) {
+                    Image(systemName: "mappin.and.ellipse")
+                        .accessibilityHidden(true)
+                    Text(viewModel.trip.destination)
+                }
+                .font(TKTypography.heroTitle)
+                .foregroundStyle(TKColors.textPrimary)
+                .lineLimit(2)
+
                 Spacer(minLength: TKSpacing.sm)
                 TKBadge(text: status.displayName, color: TKColors.status(status))
             }
 
-            Label(
-                TripDateFormatter.dateRange(from: viewModel.trip.startDate, to: viewModel.trip.endDate),
-                systemImage: "calendar"
-            )
+            HStack(spacing: TKSpacing.xs) {
+                Image(systemName: "calendar")
+                    .accessibilityHidden(true)
+                Text(TripDateFormatter.dateRange(from: viewModel.trip.startDate, to: viewModel.trip.endDate))
+            }
             .font(TKTypography.cardSubtitle)
             .foregroundStyle(TKColors.textSecondary)
         }
@@ -327,6 +341,7 @@ private struct FocusCard: View {
                         TKColors.itinerary(item.type).opacity(0.18),
                         in: RoundedRectangle(cornerRadius: TKRadius.small, style: .continuous)
                     )
+                    .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: TKSpacing.xs) {
                     Text(item.title)
@@ -339,10 +354,14 @@ private struct FocusCard: View {
                         .foregroundStyle(TKColors.textSecondary)
 
                     if !item.locationName.isEmpty {
-                        Label(item.locationName, systemImage: "mappin")
-                            .font(TKTypography.metadata)
-                            .foregroundStyle(TKColors.textSecondary)
-                            .lineLimit(1)
+                        HStack(spacing: TKSpacing.xs) {
+                            Image(systemName: "mappin")
+                                .accessibilityHidden(true)
+                            Text(item.locationName)
+                        }
+                        .font(TKTypography.metadata)
+                        .foregroundStyle(TKColors.textSecondary)
+                        .lineLimit(1)
                     }
                 }
 

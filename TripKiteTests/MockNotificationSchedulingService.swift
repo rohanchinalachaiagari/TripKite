@@ -5,6 +5,7 @@ final actor MockNotificationSchedulingService: NotificationSchedulingService {
     private(set) var scheduleCalls: [ItineraryItem] = []
     private(set) var itemCancellations: [UUID] = []
     private(set) var tripCancellations: [UUID] = []
+    private(set) var cancelAllCount = 0
     private(set) var authorizationRequestCount = 0
     private(set) var authorizationStatusQueryCount = 0
 
@@ -51,5 +52,9 @@ final actor MockNotificationSchedulingService: NotificationSchedulingService {
 
     func cancelReminders(forTripId tripId: UUID) async {
         tripCancellations.append(tripId)
+    }
+
+    func cancelAllReminders() async {
+        cancelAllCount += 1
     }
 }

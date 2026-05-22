@@ -27,6 +27,7 @@ struct ItineraryItemRow: View {
                     // the place name.
                     HStack(spacing: TKSpacing.xs) {
                         Image(systemName: "mappin")
+                            .accessibilityHidden(true)
                         Text(item.locationName)
                     }
                     .font(TKTypography.metadata)
@@ -53,6 +54,7 @@ struct ItineraryItemRow: View {
             .foregroundStyle(typeColor)
             .frame(width: 36, height: 36)
             .background(typeColor.opacity(0.18), in: RoundedRectangle(cornerRadius: TKRadius.small, style: .continuous))
+            .accessibilityHidden(true)
     }
 }
 

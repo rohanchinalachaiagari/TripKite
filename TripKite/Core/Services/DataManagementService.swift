@@ -49,6 +49,12 @@ nonisolated final class LocalDataManagementService: DataManagementService, @unch
             }
         }
 
+        // Final sweep: pending requests can outlive their trip if a crash
+        // landed between scheduling and the trip-row delete. Removing all
+        // pending notifications after the per-trip loop guarantees the
+        // notification center matches the now-empty Core Data store.
+        await notificationService.cancelAllReminders()
+
         settingsStore.reset()
     }
 }

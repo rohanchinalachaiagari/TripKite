@@ -58,6 +58,28 @@ final class LocalDataManagementServiceTests: XCTestCase {
         XCTAssertEqual(Set(deletedPaths), Set([doc1.localRelativePath, doc2.localRelativePath]))
     }
 
+    func testClearAllData_RunsGlobalNotificationSweep() async throws {
+        let env = makeEnv()
+        let tripA = makeTrip(title: "A")
+        let tripB = makeTrip(title: "B", startOffset: 10)
+        await env.trips.seed([tripA, tripB])
+
+        try await env.service.clearAllData()
+
+        let sweepCount = await env.notifications.cancelAllCount
+        XCTAssertEqual(sweepCount, 1, "Clear All Data should run a single global sweep after the per-trip loop")
+    }
+
+    func testClearAllData_OnEmptyStore_StillRunsGlobalSweep() async throws {
+        let env = makeEnv()
+        try await env.service.clearAllData()
+
+        // Even with no trips, the sweep should run so any orphaned pending
+        // notifications from a prior crash get cleared.
+        let sweepCount = await env.notifications.cancelAllCount
+        XCTAssertEqual(sweepCount, 1)
+    }
+
     func testClearAllData_ResetsSettings() async throws {
         let env = makeEnv()
         env.settings.setDefaultReminderOption(.hourBefore1)

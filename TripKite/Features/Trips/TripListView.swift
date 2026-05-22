@@ -133,8 +133,8 @@ struct TripListView: View {
         } else if viewModel.trips.isEmpty {
             TKEmptyStateView(
                 systemImage: "suitcase",
-                title: "Where to next?",
-                message: "Start planning your next adventure. Keep flights, hotels, and activities together — even when you're offline.",
+                title: "No trips yet",
+                message: "Plan your next trip and keep flights, hotels, and activities together, even when you're offline.",
                 actionTitle: "Plan your first trip",
                 actionSystemImage: "airplane.departure",
                 action: { isCreating = true }
@@ -223,6 +223,7 @@ private struct TripRow: View {
                 // read as one cohesive metadata row at this font size.
                 HStack(spacing: TKSpacing.xs) {
                     Image(systemName: "mappin.and.ellipse")
+                        .accessibilityHidden(true)
                     Text(trip.destination)
                 }
                 .font(TKTypography.cardSubtitle)

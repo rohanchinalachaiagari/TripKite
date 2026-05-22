@@ -113,15 +113,11 @@ struct SettingsView: View {
                     .foregroundStyle(TKColors.textSecondary)
             }
 
-            VStack(alignment: .leading, spacing: TKSpacing.xs) {
-                Text("Privacy")
-                    .font(TKTypography.cardSubtitle)
-                Text("TripKite stores your trips, itinerary items, reminders, and documents locally on this device. TripKite does not require an account, does not collect analytics, and does not send your personal travel data to a server. Documents you attach may be included in your standard iOS device backup if you have iCloud Backup enabled.")
-                    .font(TKTypography.metadata)
-                    .foregroundStyle(TKColors.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+            NavigationLink {
+                PrivacyView()
+            } label: {
+                Label("Privacy", systemImage: "lock.shield")
             }
-            .padding(.vertical, TKSpacing.xs)
 
             Link(destination: URL(string: "mailto:sunronreddy@gmail.com")!) {
                 Label("Contact Support", systemImage: "envelope")
@@ -156,9 +152,9 @@ struct SettingsView: View {
 
     private var authorizationStatusText: String {
         switch viewModel.authorizationStatus {
-        case .authorized: return "Authorized"
-        case .denied: return "Denied"
-        case .notDetermined: return "Not Requested"
+        case .authorized: return "On"
+        case .denied: return "Off"
+        case .notDetermined: return "Not requested"
         case .provisional: return "Provisional"
         }
     }

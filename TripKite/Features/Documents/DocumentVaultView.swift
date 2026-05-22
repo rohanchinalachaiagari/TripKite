@@ -59,8 +59,17 @@ struct DocumentVaultView: View {
                 allowedContentTypes: [.pdf, .image, .data],
                 allowsMultipleSelection: false
             ) { result in
-                if case .success(let urls) = result, let url = urls.first {
-                    viewModel.stageFile(at: url)
+                switch result {
+                case .success(let urls):
+                    if let url = urls.first { viewModel.stageFile(at: url) }
+                case .failure(let error):
+                    // User-initiated cancel surfaces as NSCocoaErrorDomain
+                    // userCancelled; treat that as a silent no-op. Anything
+                    // else feeds into the standard error alert.
+                    let ns = error as NSError
+                    if !(ns.domain == NSCocoaErrorDomain && ns.code == NSUserCancelledError) {
+                        viewModel.errorMessage = error.localizedDescription
+                    }
                 }
             }
             .photosPicker(
@@ -150,8 +159,8 @@ struct DocumentVaultView: View {
         if viewModel.trips.isEmpty {
             TKEmptyStateView(
                 systemImage: "doc.on.doc.fill",
-                title: "Plan a trip first",
-                message: "Documents in the vault belong to a trip. Create a trip from the Trips tab to start attaching files."
+                title: "No trips yet",
+                message: "Documents belong to a trip. Create a trip from the Trips tab to start attaching files."
             )
         } else {
             TKEmptyStateView(

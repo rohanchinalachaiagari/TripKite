@@ -44,8 +44,8 @@ struct SearchView: View {
         case .idle:
             TKEmptyStateView(
                 systemImage: "magnifyingglass",
-                title: "Search across your trips",
-                message: "Find a flight by confirmation number, a hotel by city, or a screenshot by name. Search spans every trip, itinerary item, and document."
+                title: "Search your trips",
+                message: "Find a flight by confirmation number, a hotel by city, or a screenshot by name. Search covers trips, itinerary items, and documents."
             )
         case .searching:
             ProgressView()
@@ -53,7 +53,7 @@ struct SearchView: View {
             TKEmptyStateView(
                 systemImage: "magnifyingglass",
                 title: "No matches",
-                message: "We didn't find anything for \u{201C}\(query)\u{201D}."
+                message: "Nothing found for \u{201C}\(query)\u{201D}."
             )
         case .error(let message):
             TKEmptyStateView(

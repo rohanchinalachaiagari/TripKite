@@ -20,6 +20,7 @@ struct DocumentRowView: View {
                         TKColors.brand.opacity(0.18),
                         in: RoundedRectangle(cornerRadius: TKRadius.small, style: .continuous)
                     )
+                    .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: TKSpacing.xs) {
                     Text(document.fileName)
