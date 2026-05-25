@@ -255,17 +255,19 @@ struct TripDetailView: View {
     private var header: some View {
         let status = viewModel.trip.status()
         return VStack(alignment: .leading, spacing: TKSpacing.sm) {
-            HStack(alignment: .firstTextBaseline) {
-                HStack(spacing: TKSpacing.xs) {
-                    Image(systemName: "mappin.and.ellipse")
-                        .accessibilityHidden(true)
-                    Text(viewModel.trip.destination)
-                }
-                .font(TKTypography.heroTitle)
-                .foregroundStyle(TKColors.textPrimary)
-                .lineLimit(2)
+            HStack(alignment: .top, spacing: TKSpacing.sm) {
+                // Destination as the hero. The pin icon is intentionally
+                // dropped because the field IS the destination — and bumping
+                // to .largeTitle.bold gives the header a real "trip title"
+                // weight rather than reading like a row subtitle.
+                Text(viewModel.trip.destination)
+                    .font(.largeTitle.bold())
+                    .foregroundStyle(TKColors.textPrimary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
 
-                Spacer(minLength: TKSpacing.sm)
+                Spacer(minLength: 0)
+
                 TKBadge(text: status.displayName, color: TKColors.status(status))
             }
 
@@ -277,7 +279,23 @@ struct TripDetailView: View {
             .font(TKTypography.cardSubtitle)
             .foregroundStyle(TKColors.textSecondary)
         }
-        .tkCard(background: TKColors.brand.opacity(0.12))
+        .padding(TKSpacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        // Inline gradient (rather than `.tkCard(background: Color)`) so the
+        // header reads as a hero card with depth instead of a flat tinted
+        // banner. Stops mirror the screen-level TKBackground gradient at
+        // shallower opacities so the card sits on top calmly.
+        .background(
+            LinearGradient(
+                colors: [
+                    TKColors.brand.opacity(0.18),
+                    TKColors.brand.opacity(0.06)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            ),
+            in: RoundedRectangle(cornerRadius: TKRadius.medium, style: .continuous)
+        )
         .padding(.horizontal, TKSpacing.lg)
         .padding(.top, TKSpacing.sm)
         .padding(.bottom, TKSpacing.xs)

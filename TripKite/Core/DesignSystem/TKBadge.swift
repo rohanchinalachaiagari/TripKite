@@ -15,7 +15,14 @@ struct TKBadge: View {
         .font(TKTypography.metadataEmphasized)
         .padding(.horizontal, TKSpacing.sm)
         .padding(.vertical, TKSpacing.xs)
-        .background(color.opacity(0.18), in: Capsule())
+        // Tag-like rounded rectangle instead of a full capsule: reads as a
+        // label tag (the way Apple Mail flags appear) rather than a pill,
+        // and the 0.22 background opacity gives the V2.6 accent a bit more
+        // presence on tinted cards.
+        .background(
+            color.opacity(0.22),
+            in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+        )
         .foregroundStyle(color)
     }
 }

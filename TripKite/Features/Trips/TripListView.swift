@@ -213,6 +213,15 @@ private struct TripRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: TKSpacing.md) {
+            // Brand-colored leading "boarding-pass spine." Decorative cue
+            // shared by every trip row, irrespective of status — status is
+            // still carried by the badge text below. Hidden from VoiceOver.
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(TKColors.brand)
+                .frame(width: 3)
+                .frame(maxHeight: .infinity)
+                .accessibilityHidden(true)
+
             VStack(alignment: .leading, spacing: TKSpacing.xs) {
                 Text(trip.title)
                     .font(TKTypography.cardTitle)

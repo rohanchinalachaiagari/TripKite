@@ -47,7 +47,25 @@ enum MockData {
         notes: "Need to book Lake Louise reservations."
     )
 
-    static let trips: [Trip] = [tokyoTrip, lisbonTrip, nycTrip, banffTrip]
+    // "Happening Now" trip — dates are anchored relative to the current
+    // moment (computed once at first access) so previews and screenshots
+    // always render a focus card without manual setup. Release builds never
+    // see this because the whole file is #if DEBUG.
+    static let activeTahoeTrip: Trip = {
+        let now = Date()
+        let calendar = Calendar.current
+        let start = calendar.date(byAdding: .day, value: -2, to: now) ?? now
+        let end = calendar.date(byAdding: .day, value: 4, to: now) ?? now
+        return Trip(
+            title: "Tahoe Long Weekend",
+            destination: "Lake Tahoe, CA",
+            startDate: start,
+            endDate: end,
+            notes: "Camping at Emerald Bay. Stargazing forecast looks clear."
+        )
+    }()
+
+    static let trips: [Trip] = [tokyoTrip, lisbonTrip, nycTrip, banffTrip, activeTahoeTrip]
 
     static let tokyoItinerary: [ItineraryItem] = [
         ItineraryItem(
@@ -147,7 +165,39 @@ enum MockData {
         )
     ]
 
-    static let allItineraryItems: [ItineraryItem] = tokyoItinerary + lisbonItinerary
+    static let activeTahoeItinerary: [ItineraryItem] = {
+        let now = Date()
+        return [
+            ItineraryItem(
+                tripId: activeTahoeTrip.id,
+                title: "Sunrise hike at Eagle Falls",
+                type: .activity,
+                startDate: now.addingTimeInterval(-30 * 60),
+                endDate: now.addingTimeInterval(75 * 60),
+                locationName: "Eagle Falls Trailhead",
+                address: "Emerald Bay, Lake Tahoe, CA"
+            ),
+            ItineraryItem(
+                tripId: activeTahoeTrip.id,
+                title: "Lunch at Sunnyside Lodge",
+                type: .restaurant,
+                startDate: now.addingTimeInterval(3 * 3600),
+                locationName: "Sunnyside Restaurant & Lodge",
+                address: "1850 W Lake Blvd, Tahoe City, CA"
+            ),
+            ItineraryItem(
+                tripId: activeTahoeTrip.id,
+                title: "Drive to Emerald Bay campground",
+                type: .transportation,
+                startDate: now.addingTimeInterval(6 * 3600),
+                endDate: now.addingTimeInterval(7 * 3600),
+                locationName: "Emerald Bay State Park",
+                confirmationNumber: "TAHOE-EBP-77"
+            )
+        ]
+    }()
+
+    static let allItineraryItems: [ItineraryItem] = tokyoItinerary + lisbonItinerary + activeTahoeItinerary
 
     static func itineraryItems(for trip: Trip) -> [ItineraryItem] {
         allItineraryItems.filter { $0.tripId == trip.id }

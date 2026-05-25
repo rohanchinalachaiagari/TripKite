@@ -4,7 +4,7 @@ struct TKBackground: View {
     var body: some View {
         LinearGradient(
             colors: [
-                TKColors.brand.opacity(0.22),
+                TKColors.brand.opacity(0.18),
                 TKColors.brand.opacity(0.06),
                 Color(.systemBackground)
             ],

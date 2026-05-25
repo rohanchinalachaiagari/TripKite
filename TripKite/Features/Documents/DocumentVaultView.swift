@@ -160,13 +160,15 @@ struct DocumentVaultView: View {
             TKEmptyStateView(
                 systemImage: "doc.on.doc.fill",
                 title: "No trips yet",
-                message: "Documents belong to a trip. Create a trip from the Trips tab to start attaching files."
+                message: "Documents belong to a trip. Create a trip from the Trips tab to start attaching files.",
+                style: .roundedSquare
             )
         } else {
             TKEmptyStateView(
                 systemImage: "doc.on.doc.fill",
                 title: "No documents yet",
-                message: "Tap the plus button to attach a PDF, photo, or screenshot to one of your trips."
+                message: "Tap the plus button to attach a PDF, photo, or screenshot to one of your trips.",
+                style: .roundedSquare
             )
         }
     }

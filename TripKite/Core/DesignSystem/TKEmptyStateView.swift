@@ -1,5 +1,12 @@
 import SwiftUI
 
+extension TKEmptyStateView {
+    enum Style {
+        case circle
+        case roundedSquare
+    }
+}
+
 struct TKEmptyStateView: View {
     let systemImage: String
     let title: String
@@ -7,6 +14,10 @@ struct TKEmptyStateView: View {
     var actionTitle: String? = nil
     var actionSystemImage: String? = nil
     var action: (() -> Void)? = nil
+    // Visual shape of the icon backdrop. Defaults to .circle so existing
+    // callers don't need to opt in. Surfaces that read more like cards or
+    // documents (e.g. the global Documents tab) can opt into .roundedSquare.
+    var style: Style = .circle
 
     var body: some View {
         VStack(spacing: TKSpacing.lg) {
@@ -45,22 +56,32 @@ struct TKEmptyStateView: View {
 
     private var iconBackdrop: some View {
         ZStack {
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            TKColors.brand.opacity(0.28),
-                            TKColors.brand.opacity(0.10)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+            backdropShape
                 .frame(width: 112, height: 112)
 
             Image(systemName: systemImage)
                 .font(.system(size: 44, weight: .regular))
                 .foregroundStyle(TKColors.brand)
+        }
+        .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private var backdropShape: some View {
+        let gradient = LinearGradient(
+            colors: [
+                TKColors.brand.opacity(0.28),
+                TKColors.brand.opacity(0.10)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        switch style {
+        case .circle:
+            Circle().fill(gradient)
+        case .roundedSquare:
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(gradient)
         }
     }
 }
