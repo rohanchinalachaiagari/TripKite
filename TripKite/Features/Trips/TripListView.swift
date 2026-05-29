@@ -14,6 +14,11 @@ struct TripListView: View {
     @State private var navigationPath = NavigationPath()
     @State private var isCreating = false
     @State private var tripPendingDeletion: Trip?
+    // Active section is intentionally not collapsible — it's always at the
+    // top so the user sees the trip they're on right now. Upcoming defaults
+    // expanded; Past defaults collapsed to keep the list focused.
+    @State private var isUpcomingExpanded = true
+    @State private var isPastExpanded = false
 
     init(
         tripRepository: TripRepository,
@@ -144,48 +149,184 @@ struct TripListView: View {
         }
     }
 
+    // V2.8b: dropped `List` for the trip list specifically so we can own the
+    // collapse animation. Each section is a custom `tripsSection` view that
+    // renders a header plus a card-styled VStack of rows. Rows have an
+    // `.asymmetric` transition that combines `.move(edge: .top)` with
+    // `.opacity`, and SwiftUI's animation transaction is configured with a
+    // per-row delay so the rows cascade out from under the header on expand
+    // (and back under on collapse).
     private var tripList: some View {
-        List {
-            if !viewModel.upcomingTrips.isEmpty {
-                Section {
-                    ForEach(viewModel.upcomingTrips) { trip in
-                        NavigationLink(value: TripDestination(trip: trip)) {
-                            TripRow(trip: trip)
-                        }
-                    }
-                    .onDelete { indexSet in
-                        // Swipe-to-delete fires one index in practice; stage
-                        // the trip for confirmation rather than deleting it
-                        // immediately so the user has a chance to back out
-                        // before the cascade runs.
-                        if let first = indexSet.first {
-                            tripPendingDeletion = viewModel.upcomingTrips[first]
-                        }
-                    }
-                } header: {
-                    sectionHeader("Upcoming", systemImage: "airplane.departure")
+        ScrollView {
+            VStack(spacing: TKSpacing.xl) {
+                if !viewModel.activeTrips.isEmpty {
+                    tripsSection(
+                        title: "Active",
+                        systemImage: "location.fill",
+                        trips: viewModel.activeTrips,
+                        collapseBinding: nil
+                    )
+                }
+
+                if !viewModel.upcomingTrips.isEmpty {
+                    tripsSection(
+                        title: "Upcoming",
+                        systemImage: "airplane.departure",
+                        trips: viewModel.upcomingTrips,
+                        collapseBinding: $isUpcomingExpanded
+                    )
+                }
+
+                if !viewModel.pastTrips.isEmpty {
+                    tripsSection(
+                        title: "Past",
+                        systemImage: "clock.arrow.circlepath",
+                        trips: viewModel.pastTrips,
+                        collapseBinding: $isPastExpanded
+                    )
                 }
             }
+            .padding(.horizontal, TKSpacing.lg)
+            .padding(.vertical, TKSpacing.md)
+        }
+        .scrollContentBackground(.hidden)
+    }
 
-            if !viewModel.pastTrips.isEmpty {
-                Section {
-                    ForEach(viewModel.pastTrips) { trip in
-                        NavigationLink(value: TripDestination(trip: trip)) {
-                            TripRow(trip: trip)
+    // collapseBinding == nil  → section is always expanded, no chevron.
+    // collapseBinding != nil  → section has a tappable chevron header and
+    //                            uses cascadeAnimation for row stagger.
+    @ViewBuilder
+    private func tripsSection(
+        title: String,
+        systemImage: String,
+        trips: [Trip],
+        collapseBinding: Binding<Bool>?
+    ) -> some View {
+        let isExpanded = collapseBinding?.wrappedValue ?? true
+
+        VStack(alignment: .leading, spacing: TKSpacing.sm) {
+            sectionHeaderRow(
+                title: title,
+                systemImage: systemImage,
+                collapseBinding: collapseBinding
+            )
+            // SwiftUI VStack draws later siblings on top of earlier ones,
+            // so without an explicit zIndex the card sits above the header
+            // in hit-testing order. During a collapse, a row animating
+            // upward passes through the header's region — and the row,
+            // being on top, eats the tap. Lifting the header to zIndex 1
+            // makes it the topmost view in the section, so taps in the
+            // header region always go to the header regardless of what's
+            // animating below.
+            .zIndex(1)
+
+            // The rounded card sits below the header. Rows inside use a
+            // `.move(edge: .top)` transition; `.clipShape` on the card
+            // crops anything still above the card's top edge mid-animation
+            // so each row visibly emerges from under the section header
+            // rather than floating in from above.
+            VStack(spacing: 0) {
+                ForEach(Array(trips.enumerated()), id: \.element.id) { index, trip in
+                    if isExpanded {
+                        tripRowLink(for: trip)
+                            // Belt-and-suspenders: even though zIndex covers
+                            // the header-overlap case, gating hit-testing on
+                            // isExpanded also blocks taps on rows mid-fade
+                            // anywhere else in the card.
+                            .allowsHitTesting(isExpanded)
+                            .transition(
+                                .asymmetric(
+                                    insertion: .move(edge: .top).combined(with: .opacity),
+                                    removal: .move(edge: .top).combined(with: .opacity)
+                                )
+                            )
+                            .animation(
+                                .smooth(duration: 0.6)
+                                    .delay(rowDelay(index: index, total: trips.count, expanding: isExpanded)),
+                                value: isExpanded
+                            )
+
+                        if index < trips.count - 1 {
+                            Divider()
+                                .padding(.leading, TKSpacing.lg)
+                                .transition(.opacity)
+                                .animation(
+                                    .smooth(duration: 0.35)
+                                        .delay(rowDelay(index: index, total: trips.count, expanding: isExpanded)),
+                                    value: isExpanded
+                                )
                         }
                     }
-                    .onDelete { indexSet in
-                        if let first = indexSet.first {
-                            tripPendingDeletion = viewModel.pastTrips[first]
-                        }
-                    }
-                } header: {
-                    sectionHeader("Past", systemImage: "clock.arrow.circlepath")
                 }
+            }
+            .background(
+                TKColors.surfaceElevated.opacity(isExpanded ? 1 : 0),
+                in: RoundedRectangle(cornerRadius: TKRadius.medium, style: .continuous)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: TKRadius.medium, style: .continuous))
+            .animation(.smooth(duration: 0.4), value: isExpanded)
+        }
+    }
+
+    // Stagger delay per row. Expanding: top row first, others cascade in
+    // below it. Collapsing: bottom row first, others cascade up. Reversed
+    // direction keeps the "rolling under the header" feel symmetric.
+    private func rowDelay(index: Int, total: Int, expanding: Bool) -> Double {
+        let step = 0.06
+        return expanding
+            ? Double(index) * step
+            : Double(total - 1 - index) * step
+    }
+
+    private func tripRowLink(for trip: Trip) -> some View {
+        NavigationLink(value: TripDestination(trip: trip)) {
+            TripRow(trip: trip)
+                .padding(.horizontal, TKSpacing.md)
+                .padding(.vertical, TKSpacing.sm)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button(role: .destructive) {
+                tripPendingDeletion = trip
+            } label: {
+                Label("Delete Trip", systemImage: "trash")
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
+    }
+
+    @ViewBuilder
+    private func sectionHeaderRow(
+        title: String,
+        systemImage: String,
+        collapseBinding: Binding<Bool>?
+    ) -> some View {
+        if let collapseBinding {
+            Button {
+                withAnimation(.smooth(duration: 0.45)) {
+                    collapseBinding.wrappedValue.toggle()
+                }
+            } label: {
+                HStack {
+                    sectionHeader(title, systemImage: systemImage)
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(TKTypography.metadataEmphasized)
+                        .foregroundStyle(TKColors.textSecondary)
+                        .rotationEffect(.degrees(collapseBinding.wrappedValue ? 0 : -90))
+                        .accessibilityHidden(true)
+                }
+                .contentShape(Rectangle())
+                .padding(.horizontal, TKSpacing.xs)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(title) trips")
+            .accessibilityValue(collapseBinding.wrappedValue ? "Expanded" : "Collapsed")
+            .accessibilityHint("Double tap to \(collapseBinding.wrappedValue ? "collapse" : "expand")")
+        } else {
+            sectionHeader(title, systemImage: systemImage)
+                .padding(.horizontal, TKSpacing.xs)
+        }
     }
 
     private func sectionHeader(_ title: String, systemImage: String) -> some View {

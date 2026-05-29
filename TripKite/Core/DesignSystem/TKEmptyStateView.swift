@@ -49,6 +49,12 @@ struct TKEmptyStateView: View {
                 .padding(.top, TKSpacing.xs)
             }
         }
+        // Cap the empty-state content at a readable width and center it.
+        // On iPhone this is essentially a no-op because the screen is
+        // already narrower than 480pt at typical widths. On iPad this
+        // keeps the empty state from being lost in the middle of a wide
+        // detail column.
+        .frame(maxWidth: 480)
         .frame(maxWidth: .infinity)
         .padding(.vertical, TKSpacing.xxl)
         .padding(.horizontal, TKSpacing.lg)

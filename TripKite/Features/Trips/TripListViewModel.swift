@@ -27,18 +27,32 @@ final class TripListViewModel: ObservableObject {
         self.dateProvider = dateProvider
     }
 
+    // Trips currently in progress. Sort soonest ending first so a trip that's
+    // wrapping up today sits above one that ends next week.
+    var activeTrips: [Trip] {
+        let now = dateProvider()
+        return trips
+            .filter { $0.status(relativeTo: now) == .active }
+            .sorted { $0.endDate < $1.endDate }
+    }
+
+    // Trips that haven't started yet. Active trips are deliberately excluded
+    // here so they appear only in `activeTrips`; an active trip is not
+    // "upcoming" anymore.
     var upcomingTrips: [Trip] {
         let now = dateProvider()
         return trips
-            .filter { $0.status(relativeTo: now) != .past }
+            .filter { $0.status(relativeTo: now) == .upcoming }
             .sorted { $0.startDate < $1.startDate }
     }
 
+    // Trips that have already ended. Sort most recently ended first so a
+    // trip from last week sits above one from a year ago.
     var pastTrips: [Trip] {
         let now = dateProvider()
         return trips
             .filter { $0.status(relativeTo: now) == .past }
-            .sorted { $0.startDate > $1.startDate }
+            .sorted { $0.endDate > $1.endDate }
     }
 
     func load() async {

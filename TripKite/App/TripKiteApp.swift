@@ -54,7 +54,10 @@ struct TripKiteApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootTabView(
+            // V2.8: RootView branches on horizontal size class. iPhone keeps
+            // the existing RootTabView; iPad (and large iPad split-screen)
+            // gets RootSidebarView with a NavigationSplitView shell.
+            RootView(
                 tripRepository: tripRepository,
                 itineraryRepository: itineraryRepository,
                 notificationService: notificationService,

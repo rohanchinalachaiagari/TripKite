@@ -115,7 +115,29 @@ final class TripListViewModelTests: XCTestCase {
         XCTAssertEqual(tripCancellations, [trip.id])
     }
 
-    func testUpcomingTrips_ExcludesPastAndSortsAscending() async {
+    func testActiveTrips_OnlyIncludesActiveAndSortsBySoonestEnding() async {
+        let now = fixedNow()
+        let past = makeTrip(title: "Past", startOffset: -10, endOffset: -5, relativeTo: now)
+        let endsLater = makeTrip(title: "EndsLater", startOffset: -1, endOffset: 6, relativeTo: now)
+        let endsSooner = makeTrip(title: "EndsSooner", startOffset: -2, endOffset: 2, relativeTo: now)
+        let upcoming = makeTrip(title: "Upcoming", startOffset: 3, endOffset: 9, relativeTo: now)
+
+        let mock = MockTripRepository()
+        await mock.seed([past, endsLater, endsSooner, upcoming])
+
+        let viewModel = TripListViewModel(
+            repository: mock,
+            notificationService: MockNotificationSchedulingService(),
+            documentRepository: MockDocumentRepository(),
+            documentStorage: MockDocumentStorageService(),
+            dateProvider: { now }
+        )
+        await viewModel.load()
+
+        XCTAssertEqual(viewModel.activeTrips.map(\.title), ["EndsSooner", "EndsLater"])
+    }
+
+    func testUpcomingTrips_ExcludesActiveAndPast_SortsBySoonestStart() async {
         let now = fixedNow()
         let past = makeTrip(title: "Past", startOffset: -10, endOffset: -5, relativeTo: now)
         let activeNow = makeTrip(title: "Active", startOffset: -1, endOffset: 2, relativeTo: now)
@@ -134,17 +156,20 @@ final class TripListViewModelTests: XCTestCase {
         )
         await viewModel.load()
 
-        XCTAssertEqual(viewModel.upcomingTrips.map(\.title), ["Active", "Soon", "Later"])
+        // Active trips are no longer mixed into "upcoming."
+        XCTAssertEqual(viewModel.upcomingTrips.map(\.title), ["Soon", "Later"])
     }
 
-    func testPastTrips_OnlyIncludesPastAndSortsDescending() async {
+    func testPastTrips_OnlyIncludesPastAndSortsByMostRecentlyEndedFirst() async {
         let now = fixedNow()
-        let earlierPast = makeTrip(title: "Earlier", startOffset: -30, endOffset: -25, relativeTo: now)
-        let recentPast = makeTrip(title: "Recent", startOffset: -10, endOffset: -5, relativeTo: now)
+        // Trip A ends earlier even though it starts later than Trip B — sort
+        // must use endDate, not startDate.
+        let endedEarlier = makeTrip(title: "EndedEarlier", startOffset: -8, endOffset: -7, relativeTo: now)
+        let endedLater = makeTrip(title: "EndedLater", startOffset: -30, endOffset: -2, relativeTo: now)
         let upcoming = makeTrip(title: "Upcoming", startOffset: 3, endOffset: 6, relativeTo: now)
 
         let mock = MockTripRepository()
-        await mock.seed([earlierPast, recentPast, upcoming])
+        await mock.seed([endedEarlier, endedLater, upcoming])
 
         let viewModel = TripListViewModel(
             repository: mock,
@@ -155,7 +180,29 @@ final class TripListViewModelTests: XCTestCase {
         )
         await viewModel.load()
 
-        XCTAssertEqual(viewModel.pastTrips.map(\.title), ["Recent", "Earlier"])
+        XCTAssertEqual(viewModel.pastTrips.map(\.title), ["EndedLater", "EndedEarlier"])
+    }
+
+    func testActiveTrips_WhenNoneActive_ReturnsEmpty() async {
+        let now = fixedNow()
+        let past = makeTrip(title: "Past", startOffset: -10, endOffset: -5, relativeTo: now)
+        let upcoming = makeTrip(title: "Upcoming", startOffset: 5, endOffset: 9, relativeTo: now)
+
+        let mock = MockTripRepository()
+        await mock.seed([past, upcoming])
+
+        let viewModel = TripListViewModel(
+            repository: mock,
+            notificationService: MockNotificationSchedulingService(),
+            documentRepository: MockDocumentRepository(),
+            documentStorage: MockDocumentStorageService(),
+            dateProvider: { now }
+        )
+        await viewModel.load()
+
+        XCTAssertTrue(viewModel.activeTrips.isEmpty)
+        XCTAssertEqual(viewModel.upcomingTrips.map(\.title), ["Upcoming"])
+        XCTAssertEqual(viewModel.pastTrips.map(\.title), ["Past"])
     }
 
     // MARK: - Helpers
